@@ -43,7 +43,7 @@ function stormBattleStart() {
     let k = hpK;
     if (B.wg.includes('glass') && (b.type === 'wall' || b.type === 'gate')) k *= 0.5;
     if (k !== 1) { b._maxhp = Math.max(1, Math.round(b._maxhp * k)); b._hp = b._maxhp; }
-    b._stun = 0; b._shBy = null;
+    b._stun = 0; b._shBy = null; b._shGen = null;
     if (b.type === 'shieldgen' && b.level >= 1) { b._shMax = shieldHp(b.level); b._sh = b._shMax; b._shT = 0; b._shHit = 0; }
   }
   // which dome protects each building
@@ -53,13 +53,14 @@ function stormBattleStart() {
     const c = centerOf(b);
     let best = null, bd = Infinity;
     for (const g of gens) { const gc = centerOf(g), d = Math.hypot(gc.x - c.x, gc.y - c.y); if (d <= DEFS.shieldgen.shieldRange * TILE && d < bd) { bd = d; best = g; } }
-    b._shBy = best ? best.id : null;
+    b._shBy = best ? best.id : null; b._shGen = best;
   }
   for (const b of S.buildings) {
     if (b.type !== 'repairbay' || b.level < 1) continue;
     const c = centerOf(b);
     for (let i = 0; i < DEFS.repairbay.drones; i++) B.repairDrones.push({ home: b, x: c.x + (i ? 12 : -12), y: c.y - 24, tgt: null, a: i * Math.PI, beam: 0 });
   }
+  if (typeof CARGO !== 'undefined') CARGO.drones.length = 0; // cargo drones stay home during battles
   updateNukeButton(true);
 }
 
@@ -173,8 +174,7 @@ function stormEnemyKilled(u, e) {
 
 /* ================= Shield Generator ================= */
 function shieldAbsorb(b, dmg) {
-  if (!b._shBy) return dmg;
-  const g = byId(b._shBy);
+  const g = b._shGen;
   if (!g || g._dead || !(g._sh > 0)) return dmg;
   const take = Math.min(dmg, g._sh);
   g._sh -= take; g._shHit = 0.18;
@@ -771,7 +771,7 @@ function openPause() {
         <button class="hub" data-pz="guide"><b>Enemy guide</b><span>Know your enemy</span></button>
         <button class="hub danger-hub" data-pz="retreat"><b>Retreat</b><span>Keep your loot and pull out</span></button>
       </div>
-    </div>`, () => { if (B) B.paused = false; });
+    </div>`, () => { if (B) B.paused = !$('#cards').hidden; }); // an open upgrade choice keeps the battle on hold
   $('#modal-body').querySelectorAll('[data-pz]').forEach(btn => btn.addEventListener('click', () => {
     Sound.play('click');
     const k = btn.dataset.pz;

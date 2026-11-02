@@ -44,10 +44,10 @@ function openChest() {
   const first = track.querySelector('.ok:not(.got)') || track.children[Math.max(0, reached - 1)];
   if (first) track.scrollLeft = Math.max(0, first.offsetLeft - 20);
   track.querySelectorAll('[data-ct]').forEach(b => b.addEventListener('click', () => {
-    const i = +b.dataset.ct, r = chestReward(i), cap = storageCap();
+    const i = +b.dataset.ct, r = chestReward(i);
     if (c.claimed.includes(i)) return;
     c.claimed.push(i);
-    S.gold = Math.min(cap, S.gold + Math.round(r.gold || 0)); S.steel = Math.min(cap, S.steel + Math.round(r.steel || 0)); S.medals += r.medals || 0;
+    gainRes('gold', Math.round(r.gold || 0)); gainRes('steel', Math.round(r.steel || 0)); S.medals += r.medals || 0;
     Sound.play('medal'); buzz(20); save(); openChest();
   }));
 }
@@ -120,10 +120,11 @@ function openQuartermaster() {
   $('#modal-body').querySelectorAll('[data-qm]').forEach(b => b.addEventListener('click', () => {
     const it = QM_ITEMS.find(x => x.id === b.dataset.qm), price = qmPrice(it);
     if (S.medals < price) { toast(`You need ${price} medals`, 'bad'); Sound.play('error'); return; }
+    if (it.kind && storageCap() - S[it.kind] < 1) { toast(`Your ${it.kind} storage is full. Spend some first`, 'bad'); Sound.play('error'); return; }
     S.medals -= price;
     if (it.kind) {
-      const c = storageCap(), amt = Math.round(c * it.amount / 10) * 10;
-      S[it.kind] = Math.min(c, S[it.kind] + amt); pulseRes(it.kind);
+      const c = storageCap(), amt = gainRes(it.kind, Math.round(c * it.amount / 10) * 10);
+      pulseRes(it.kind);
       toast(`+${fmt(amt)} ${it.kind}`, 'good');
     } else {
       if (!S.boosts) S.boosts = {};

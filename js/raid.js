@@ -93,7 +93,7 @@ function endRaid(reason) {
   if (tier > prevTier) { const g = dropGear(tier >= 4 ? 2 : tier >= 2 ? 1 : 0); setTimeout(() => toast(`Gear found: ${g.name}`, 'good'), 600); }
   if (tier > 0) orderEvent('mission', 1);
   eventTokens(tier * 4);
-  S.gold = Math.min(cap, S.gold + res); S.steel = Math.min(cap, S.steel + res);
+  gainRes('gold', res); gainRes('steel', res);
   st.best = Math.max(st.best, frac);
   B.battleStars += tier * 3;
   save();

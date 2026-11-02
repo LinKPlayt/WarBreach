@@ -83,6 +83,7 @@ function processTraining(now) {
   let done = 0;
   while (A.queue.length && now >= A.queue[0].end) {
     const q = A.queue.shift();
+    if (!TROOPS[q.type]) continue;
     A.troops[q.type] = (A.troops[q.type] || 0) + 1;
     S.stats.trained = (S.stats.trained || 0) + 1;
     orderEvent('train', 1);

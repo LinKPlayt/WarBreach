@@ -140,6 +140,21 @@ Most new screens live under the Operations button in the top bar.
 **New enemies:** Riot Troopers with ballistic shields · Hovercraft that come up the river · Kamikaze Drones · EMP Troopers that knock defenses offline · Assault Mechs · Paratroopers dropped by transport planes · Field Officers who rally nearby troops · the Titan Mech boss on every tenth wave.
 **Base and records:** Hall of Fame with your ten best runs and personal records · after-action report with an MVP defense, damage chart and kills by enemy type · photo mode with filters, time of day, weather and a shutter · coverage view for ground and air · build queue (three upgrades) · cargo drones that collect for you from HQ 4 · a living base with patrols, a jeep and passing helicopters.
 
+## Update 3.5: stability and fixes
+
+Found with automated stress tests: battle soak runs at every Command Center level, threat, doctrine and War Games mix; thousands of random UI actions; two simulated weeks of base life; damaged and old saves.
+
+- Titan Mech now arrives from wave 20 (wave 10 is a Siege Tank again) with slightly less armor; it could stall mid-level bases for minutes.
+- Late endless waves are a little smaller (fewer Riot Troopers and Kamikaze Drones).
+- Build queue: upgrading a queued building yourself removes the queued entry, so it is not upgraded a second time.
+- Resources above the storage limit (after selling a Supply Depot) are never cut by refunds, mission, login, War Chest, Quartermaster, raid or outpost rewards.
+- The Quartermaster refuses gold and steel crates when that storage is full instead of taking the medals.
+- Outposts keep their income when storage is full; surprise-attack win reports never show negative loot.
+- Upgrade cards never open over a defeat and close with the battle; pausing while choosing one keeps the battle on hold.
+- Cargo drones stay home during battles; Collect all reports oil correctly.
+- Damaged saves repair themselves (invalid resource values, a missing Command Center, unknown troops or items).
+- Units under heavy fire keep their colors instead of flashing white; the Illumination Flare is less blinding; Shield Generators are cheaper to run.
+
 ## Code layout
 
 - `js/data.js` – building stats, costs, limits per HQ level, wave previews

@@ -102,6 +102,7 @@ function startWave(n) {
 
 function endBattle(reason) {
   if (!B || B.over) return;
+  $('#cards').hidden = true;
   if (B.mission && B.mission.raid) { endRaid(reason); return; }
   if (B.mission) { endMission(reason); return; }
   B.over = true;
@@ -162,6 +163,7 @@ function leaveBattle() {
   awardChestStars(B.battleStars);
   for (const b of S.buildings) { delete b._hp; delete b._maxhp; delete b._dead; delete b._cd; delete b._tgt; delete b._heal; delete b._beamOn; b._flash = 0; }
   B = null;
+  $('#cards').hidden = true;
   updateNukeButton(true);
   document.body.classList.remove('in-battle', 'hq-danger', 'targeting', 'no-airstrike', 'deploying');
   $('#banner').hidden = true;

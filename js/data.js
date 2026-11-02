@@ -436,13 +436,13 @@ function waveComposition(n) {
   if (n >= 14) list.push({ type: 'jammer', count: Math.floor((n - 12) / 5) + 1 });
   // Update 3.0 forces
   if (n >= 4 && n % 2 === 0) list.push({ type: 'officer', count: 1 + Math.floor(n / 20) });
-  if (n >= 7) list.push({ type: 'riot', count: Math.floor((n - 5) / 2) });
+  if (n >= 7) list.push({ type: 'riot', count: Math.floor((n - 4) / 3) });
   if (n >= 9) list.push({ type: 'hover', count: Math.floor((n - 7) / 4) + 1 });
-  if (n >= 11) list.push({ type: 'kamikaze', count: Math.floor((n - 9) / 2) });
+  if (n >= 11) list.push({ type: 'kamikaze', count: Math.floor((n - 8) / 3) });
   if (n >= 15) list.push({ type: 'emptrooper', count: Math.floor((n - 13) / 3) + 1 });
   if (n >= 16) list.push({ type: 'walker', count: Math.floor((n - 14) / 4) + 1 });
-  // boss waves: a Siege Tank every fifth wave, a Titan Mech every tenth
-  if (isBossWave(n)) list.push(n % 10 === 0 ? { type: 'titan', count: Math.max(1, Math.floor(n / 20)) } : { type: 'siege', count: 1 + Math.floor(n / 15) });
+  // boss waves: a Siege Tank every fifth wave, a Titan Mech every tenth from wave 20
+  if (isBossWave(n)) list.push(n % 10 === 0 && n >= 20 ? { type: 'titan', count: Math.max(1, Math.floor(n / 20)) } : { type: 'siege', count: 1 + Math.floor(n / 15) });
   return list;
 }
 
@@ -990,7 +990,7 @@ Object.assign(ENEMIES, {
   walker:     { name: 'Assault Mech', hp: 1700, speed: 0.5, dmg: 55, rate: 0.9, range: 3.6, splash: 0.6, bounty: 70, r: 16, vehicle: true, armor: 12, walker: true },
   para:       { name: 'Paratrooper', hp: 75, speed: 1.1, dmg: 7, rate: 1, range: 2.2, bounty: 6, r: 6 },
   officer:    { name: 'Field Officer', hp: 260, speed: 0.95, dmg: 9, rate: 1, range: 2.6, bounty: 60, r: 7, officer: true, auraRange: 3 },
-  titan:      { name: 'Titan Mech', hp: 5200, speed: 0.3, dmg: 150, rate: 0.4, range: 4.5, splash: 1.3, bounty: 450, r: 28, vehicle: true, boss: true, armor: 20, walker: true },
+  titan:      { name: 'Titan Mech', hp: 5200, speed: 0.3, dmg: 150, rate: 0.4, range: 4.5, splash: 1.3, bounty: 450, r: 28, vehicle: true, boss: true, armor: 16, walker: true },
 });
 Object.assign(ENEMY_NOTES, {
   riot: 'Carries a ballistic shield: bullets do 65% less damage. Use explosives, fire or lasers.',
@@ -1000,7 +1000,7 @@ Object.assign(ENEMY_NOTES, {
   walker: 'Heavily armored two-legged mech. Light guns barely scratch it.',
   para: 'Dropped by transport planes right inside your base.',
   officer: 'Commands nearby troops: they move and shoot faster. Worth a big bounty.',
-  titan: 'Boss of every tenth wave. A colossal mech that stomps everything around it.',
+  titan: 'Boss of every tenth wave from wave 20. A colossal mech that stomps everything around it.',
 });
 
 // New commander ability
@@ -1059,3 +1059,23 @@ const PHOTO_FILTERS = [
 function supportUnlockedAt(L) {
   return ['repairbay', 'shieldgen', 'silo'].filter(t => LIMITS[t][L] > 0 && LIMITS[t][L - 1] === 0);
 }
+
+/* =================== Update 3.5: stability and fixes =================== */
+const PATCH_VERSION = '3.5';
+const PATCH_NOTES = [
+  ['Titan Mech rebalanced', 'Now arrives from wave 20 (wave 10 is a Siege Tank again) with a little less armor'],
+  ['Smaller late waves', 'Fewer Riot Troopers and Kamikaze Drones in very long endless runs'],
+  ['Build queue', 'Upgrading a queued building yourself now removes it from the queue'],
+  ['No lost resources', 'Rewards, refunds, raids and outposts never cut resources that are above your storage limit'],
+  ['Quartermaster', 'Gold and steel crates are refused (medals kept) when that storage is full'],
+  ['Outposts', 'Income is kept if your storage is full when you collect'],
+  ['Surprise attacks', 'Win reports no longer show negative loot'],
+  ['Upgrade cards', 'Never appear over a defeat and can no longer get stuck on screen'],
+  ['Pausing', 'Pausing or switching apps while choosing an upgrade card keeps the battle on hold'],
+  ['Cargo drones', 'Stay home during battles'],
+  ['Collect all', 'Reports oil correctly'],
+  ['Save repair', 'Damaged saves fix themselves: bad resource values, a missing Command Center, unknown troops'],
+  ['Readable bosses', 'Units under heavy fire keep their colors instead of flashing white'],
+  ['Softer flares', 'The Illumination Flare is less blinding at night'],
+  ['Faster shields', 'Shield Generators cost less performance in big battles'],
+];

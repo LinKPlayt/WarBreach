@@ -6,6 +6,7 @@
 function freshBonus() { return { dmgAll: 0, rate: 0, range: 0, troops: 0, hero: 0, loot: 0, cd: 1, dmgType: {}, antiAir: 0 }; }
 
 function offerWaveCards() {
+  if (!B || B.over || B.phase === 'lost') return; // never over a defeat
   const pool = WAVE_CARDS.slice();
   const pick = [];
   while (pick.length < 3 && pool.length) pick.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
@@ -389,8 +390,7 @@ function checkSurpriseAttack(awayMs) {
   const cap = storageCap();
   let report;
   if (won) {
-    const g = Math.round(Math.min(cap - S.gold, 80 * hqLevel() + 40) / 10) * 10, st2 = Math.round(Math.min(cap - S.steel, 60 * hqLevel() + 30) / 10) * 10;
-    S.gold += Math.max(0, g); S.steel += Math.max(0, st2);
+    const g = gainRes('gold', Math.round((80 * hqLevel() + 40) / 10) * 10), st2 = gainRes('steel', Math.round((60 * hqLevel() + 30) / 10) * 10);
     S.stats.kills = (S.stats.kills || 0) + 6 + hqLevel() * 2;
     report = { won, gold: g, steel: st2 };
   } else {
@@ -466,10 +466,12 @@ function worldPending() {
   return out;
 }
 function collectWorld() {
-  const W = worldState(), p = worldPending(), cap = storageCap();
-  for (const k in p) S[k] = Math.min(cap, (S[k] || 0) + p[k]);
+  const W = worldState(), p = worldPending(), got = {};
+  const room = k => Math.max(0, storageCap() - (S[k] || 0));
+  if (Object.keys(p).some(k => p[k] > 0) && Object.keys(p).every(k => !p[k] || room(k) < 1)) { toast('Storage is full. Spend some resources first, the outposts will keep holding your income', 'bad'); Sound.play('error'); return; }
+  for (const k in p) got[k] = gainRes(k, p[k]);
   for (const id in W.owned) W.owned[id].last = Date.now();
-  toast(`Collected ${fmt(p.gold)} gold, ${fmt(p.steel)} steel${p.oil ? `, ${fmt(p.oil)} oil` : ''} from your outposts`, 'good');
+  toast(`Collected ${fmt(got.gold)} gold, ${fmt(got.steel)} steel${got.oil ? `, ${fmt(got.oil)} oil` : ''} from your outposts`, 'good');
   Sound.play('collect'); save(); openWorldMap();
 }
 // The enemy counter-attacks one of your outposts now and then; defend it or lose it.

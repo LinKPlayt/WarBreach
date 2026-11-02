@@ -482,7 +482,14 @@ const WHATS_NEW_3 = [
   ['Double-tap zoom', 'Plus zoom speed, resolution and frame rate settings'],
 ];
 function maybeShowWhatsNew3() {
-  if (S.seenUpdate3 === UPDATE3_VERSION) return false;
+  if (S.seenUpdate3 === UPDATE3_VERSION) {
+    if (S.seenPatch !== PATCH_VERSION) {
+      S.seenPatch = PATCH_VERSION; save();
+      if (S.tut >= 99) toast(`Update ${PATCH_VERSION} installed: ${PATCH_NOTES.length} fixes. Menu, then What's new`, 'info');
+    }
+    return false;
+  }
+  S.seenPatch = PATCH_VERSION;
   const fresh = S.tut != null && S.tut < 99;
   S.seenUpdate3 = UPDATE3_VERSION; S.seenUpdate2 = UPDATE2_VERSION; S.seenUpdate = UPDATE_VERSION; save();
   if (fresh) return false;
@@ -492,8 +499,11 @@ function maybeShowWhatsNew3() {
 function openWhatsNew3(back) {
   openModal(`
     <div class="settings">
-      <div class="m-head"><div><span class="stamp">Update ${UPDATE3_VERSION}</span><h2>Storm Front</h2></div></div>
+      <div class="m-head"><div><span class="stamp">Update ${PATCH_VERSION}</span><h2>Storm Front</h2></div></div>
       <p class="lead">The menu button (top right) now opens the new <b>Settings</b>, <b>Hall of Fame</b>, <b>Photo mode</b> and <b>Coverage view</b>.</p>
+      <h3 class="report-h">Update ${PATCH_VERSION}: fixes</h3>
+      <ul class="whats-new">${PATCH_NOTES.map(([a, b]) => `<li><b>${a}</b><span>${b}</span></li>`).join('')}</ul>
+      <h3 class="report-h">Update ${UPDATE3_VERSION}: new features</h3>
       <ul class="whats-new">${WHATS_NEW_3.map(([a, b]) => `<li><b>${a}</b><span>${b}</span></li>`).join('')}</ul>
       <div class="settings-row"><button class="btn" data-close>To the front</button></div>
     </div>`, back || null);

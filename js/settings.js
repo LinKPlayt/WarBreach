@@ -66,7 +66,7 @@ function openSettings(back, tab) {
     <div class="settings set-wrap">
       <div class="m-head set-head"><h2>Settings</h2><div class="tabs set-tabs">${SET_TABS.map(([id, name]) => `<button class="tab ${id === setTab ? 'on' : ''}" data-st="${id}">${name}</button>`).join('')}</div></div>
       <div class="set-body" id="set-body"></div>
-      <div class="settings-row set-foot"><span class="set-ver">WarBreach ${UPDATE3_VERSION} · Storm Front</span><button class="btn" data-close>Done</button></div>
+      <div class="settings-row set-foot"><span class="set-ver">WarBreach ${PATCH_VERSION} · Storm Front</span><button class="btn" data-close>Done</button></div>
     </div>`, back || null);
   const body = $('#modal-body');
   body.querySelectorAll('[data-st]').forEach(t => t.addEventListener('click', () => {
@@ -118,7 +118,7 @@ function renderDataTab(el, back) {
     <div class="set-row"><div class="set-label"><b>Backup and restore</b><span>Copy a save code to move your base to another device.</span></div><button class="btn ghost" data-sd="backup">Open</button></div>
     <div class="set-row"><div class="set-label"><b>Save file</b><span>Saved automatically on this device · ${(bytes / 1024).toFixed(1)} KB</span></div><button class="btn ghost" data-sd="save">Save now</button></div>
     <div class="set-row"><div class="set-label"><b>Tutorial</b><span>Show the first-time hints again.</span></div><button class="btn ghost" data-sd="tut">Replay</button></div>
-    <div class="set-row"><div class="set-label"><b>What's new</b><span>Everything in Update ${UPDATE3_VERSION}.</span></div><button class="btn ghost" data-sd="news">Show</button></div>
+    <div class="set-row"><div class="set-label"><b>What's new</b><span>Fixes in ${PATCH_VERSION} and everything from ${UPDATE3_VERSION}.</span></div><button class="btn ghost" data-sd="news">Show</button></div>
     <div class="set-row danger-row"><div class="set-label"><b>Reset base</b><span>Erases everything and starts over. This cannot be undone.</span></div><button class="btn danger-outline" data-sd="reset">Reset</button></div>`;
   el.querySelectorAll('[data-sd]').forEach(b => b.addEventListener('click', () => {
     const k = b.dataset.sd;
@@ -152,7 +152,7 @@ function openMenu() {
     { id: 'ach', name: 'Achievements', sub: `${achClaimable()} to claim`, dot: achClaimable() > 0, fn: () => { openAchievements(); modalOnClose = openMenu; } },
     { id: 'wardrobe', name: 'Wardrobe', sub: 'Skins, flags and camo', fn: openWardrobe },
     { id: 'layouts', name: 'Layouts', sub: 'Save and edit your base', fn: openLayouts },
-    { id: 'news', name: "What's new", sub: `Update ${UPDATE3_VERSION}`, fn: () => openWhatsNew3(openMenu) },
+    { id: 'news', name: "What's new", sub: `Update ${PATCH_VERSION}`, fn: () => openWhatsNew3(openMenu) },
     { id: 'fs', name: 'Fullscreen', sub: 'Hide the browser bars', fn: () => { closeModal(); toggleFullscreen(); } },
   ];
   openModal(`

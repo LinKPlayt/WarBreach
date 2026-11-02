@@ -67,6 +67,17 @@ function migrate(s) {
   if (!Array.isArray(s.queue)) s.queue = [];
   if (!Array.isArray(s.wargames)) s.wargames = [];
   if (!s.doctrine) s.doctrine = 'none';
+  // Update 3.5: repair damaged or hand-edited saves
+  for (const k of ['gold', 'steel', 'oil', 'medals', 'xp']) if (typeof s[k] !== 'number' || !Number.isFinite(s[k]) || s[k] < 0) s[k] = 0;
+  if (!s.buildings.some(b => b.type === 'hq')) {
+    const nextId = Math.max(0, ...s.buildings.map(b => b.id || 0)) + 1;
+    s.buildings.push({ id: nextId, type: 'hq', x: Math.floor(MAP_W / 2) - 2, y: Math.floor(MAP_H / 2) - 1, level: 1, job: null, stored: 0, baseAngle: 0 });
+  }
+  s.nextId = Math.max(s.nextId || 1, ...s.buildings.map(b => (b.id || 0) + 1));
+  for (const k of Object.keys(s.army.troops)) if (!TROOPS[k] || !Number.isFinite(s.army.troops[k])) delete s.army.troops[k];
+  s.army.queue = (s.army.queue || []).filter(q => q && TROOPS[q.type] && Number.isFinite(q.end));
+  for (const k of Object.keys(s.items)) if (!ITEMS[k]) delete s.items[k];
+  s.queue = s.queue.filter(q => q && s.buildings.some(b => b.id === q.id));
   return s;
 }
 
@@ -136,11 +147,16 @@ function storageCap() {
 
 function canAfford(c) { return S.gold >= (c.gold || 0) && S.steel >= (c.steel || 0) && (S.oil || 0) >= (c.oil || 0); }
 function pay(c) { S.gold -= c.gold || 0; S.steel -= c.steel || 0; S.oil = (S.oil || 0) - (c.oil || 0); }
+// Add resources up to the storage cap. Never takes anything away, even when a resource is
+// already above the cap (which happens after selling a Supply Depot). Returns what was added.
+function gainRes(kind, amt) {
+  const room = Math.max(0, storageCap() - (S[kind] || 0));
+  const got = Math.max(0, Math.min(Math.floor(amt || 0), room));
+  S[kind] = (S[kind] || 0) + got;
+  return got;
+}
 function refund(c, frac) {
-  const cap = storageCap();
-  S.gold = Math.min(cap, S.gold + Math.floor((c.gold || 0) * frac));
-  S.steel = Math.min(cap, S.steel + Math.floor((c.steel || 0) * frac));
-  S.oil = Math.min(cap, (S.oil || 0) + Math.floor((c.oil || 0) * frac));
+  for (const k of ['gold', 'steel', 'oil']) gainRes(k, (c[k] || 0) * frac);
 }
 
 function rebuildGrid() {
@@ -284,6 +300,8 @@ function openRoadmap() {
 function upgrade(b) {
   const st = upgradeStatus(b);
   if (!st.ok) { toast(st.reason, 'bad'); return; }
+  // upgrading by hand replaces any queued upgrade for this building
+  if (S.queue && S.queue.some(q => q.id === b.id)) S.queue = S.queue.filter(q => q.id !== b.id);
   pay(st.cost);
   startJob(b, st.to);
   Sound.play('build');
@@ -329,16 +347,17 @@ function sell(b) {
 // Collect from every mine and foundry in one tap.
 function collectAll() {
   tutorialEvent('collect');
-  let g = 0, st = 0, any = false;
+  let g = 0, st = 0, oil = 0, any = false;
   for (const b of S.buildings) {
     if (!hasBubble(b)) continue;
     any = true;
-    const amt = collect(b, true);
-    if (DEFS[b.type].produces === 'gold') g += amt; else st += amt;
+    const amt = collect(b, true), kind = DEFS[b.type].produces;
+    if (kind === 'gold') g += amt; else if (kind === 'oil') oil += amt; else st += amt;
   }
   if (!any) return;
-  if (!g && !st) { toast('Storage is full. Build or upgrade a Supply Depot', 'bad'); Sound.play('error'); return; }
-  toast(`Collected ${g ? fmt(g) + ' gold' : ''}${g && st ? ' and ' : ''}${st ? fmt(st) + ' steel' : ''}`, 'good');
+  if (!g && !st && !oil) { toast('Storage is full. Build or upgrade a Supply Depot', 'bad'); Sound.play('error'); return; }
+  const parts = [g && fmt(g) + ' gold', st && fmt(st) + ' steel', oil && fmt(oil) + ' oil'].filter(Boolean);
+  toast(`Collected ${parts.join(', ').replace(/, ([^,]*)$/, ' and $1')}`, 'good');
 }
 
 function collect(b, silent) {
@@ -1445,9 +1464,8 @@ function claimMission(id) {
   const m = MISSIONS.find(x => x.id === id);
   if (!m || S.claimed[id] || !missionState(m).done) return;
   S.claimed[id] = true;
-  const cap = storageCap();
-  if (m.reward.gold) S.gold = Math.min(cap, S.gold + m.reward.gold);
-  if (m.reward.steel) S.steel = Math.min(cap, S.steel + m.reward.steel);
+  if (m.reward.gold) gainRes('gold', m.reward.gold);
+  if (m.reward.steel) gainRes('steel', m.reward.steel);
   if (m.reward.medals) S.medals += m.reward.medals;
   addXP(25);
   Sound.play('medal'); buzz(20);
@@ -1654,8 +1672,8 @@ function openLogin() {
     </div>`);
   const b = $('#btn-claim-login');
   if (b) b.addEventListener('click', () => {
-    const i = loginNextDay(), r = loginReward(i), cap = storageCap();
-    S.gold = Math.min(cap, S.gold + r.gold); S.steel = Math.min(cap, S.steel + r.steel); S.medals += r.medals;
+    const i = loginNextDay(), r = loginReward(i);
+    gainRes('gold', r.gold); gainRes('steel', r.steel); S.medals += r.medals;
     S.login = { day: i, last: dayKey() };
     Sound.play('medal'); buzz(30);
     toast(`Day ${i + 1} supplies collected`, 'good');
