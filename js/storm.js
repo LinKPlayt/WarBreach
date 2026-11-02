@@ -476,7 +476,7 @@ function drawStormGround(ctx) {
   // flares' light pool on the ground
   for (const f of B.flares) {
     const k = Math.min(1, f.life / 2) * (0.85 + Math.sin(tSec * 30 + f.x) * 0.15);
-    ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.35 * k;
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.14 * k;
     ctx.drawImage(glowSprite('#fff4d0'), f.x - f.r, f.y - f.r * 0.8, f.r * 2, f.r * 1.6);
     ctx.restore();
   }
@@ -533,8 +533,8 @@ function drawStormAir(ctx) {
     const x = f.x + Math.sin(tSec * 1.5 + f.x) * 5, y = f.y - f.h;
     ctx.fillStyle = 'rgba(230,230,220,0.85)'; ctx.beginPath(); ctx.ellipse(x, y - 12, 8, 4, 0, Math.PI, 0); ctx.fill();
     ctx.save(); ctx.globalCompositeOperation = 'lighter';
-    ctx.drawImage(glowSprite('#fff4d0'), x - 22, y - 22, 44, 44);
-    ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(x, y, 3, 0, Math.PI * 2); ctx.fill();
+    ctx.globalAlpha = 0.75; ctx.drawImage(glowSprite('#fff4d0'), x - 15, y - 15, 30, 30); ctx.globalAlpha = 1;
+    ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(x, y, 2.5, 0, Math.PI * 2); ctx.fill();
     ctx.restore();
   }
   // focus marker
@@ -580,7 +580,7 @@ function drawQuadDrone(ctx, x, y, accent, alt) {
 // Extra light sources for the night renderer.
 function stormLights(L, C) {
   if (!B) return;
-  for (const f of B.flares) L.push({ x: f.x, y: f.y, r: f.r * 1.4, i: Math.min(1, f.life / 2) * (0.9 + Math.sin(tSec * 30 + f.x) * 0.1), c: C.white, hot: true });
+  for (const f of B.flares) L.push({ x: f.x, y: f.y, r: f.r * 1.3, i: Math.min(1, f.life / 2) * (0.8 + Math.sin(tSec * 30 + f.x) * 0.08), c: C.white });
   for (const g of S.buildings) if (g.type === 'shieldgen' && !g._dead && g._sh > 0) { const c = centerOf(g); L.push({ x: c.x, y: c.y, r: DEFS.shieldgen.shieldRange * TILE * 1.1, i: 0.45 + (g._shHit > 0 ? 0.4 : 0), c: C.blue }); }
   for (const d of B.repairDrones) if (d.beam) L.push({ x: d.x, y: d.y + 20, r: 50, i: 0.7, c: C.green, hot: true });
   for (const m of B.missiles) L.push({ x: m.x, y: m.y - m.h * 0.3, r: 70, i: 0.9, c: C.fire, hot: true });

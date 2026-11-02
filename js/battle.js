@@ -558,7 +558,8 @@ function damageEnemy(u, dmg, src) {
   if (src) B.dmgBy[src] = (B.dmgBy[src] || 0) + Math.min(dmg, u.hp);
   if (B.raid && ed.raidBoss) raidHit(u, Math.min(dmg, u.hp));
   u.hp -= dmg;
-  u.hit = 0.1;
+  // flash white on a hit, but at most a few times a second so units under heavy fire stay readable
+  if (!(u.hitCd > 0)) { u.hit = 0.08; u.hitCd = 0.3; }
   if (dmg >= 120 && S.settings.dmgnums !== false) floaters.push({ x: u.x + (Math.random() - 0.5) * 10, y: u.y - 24, text: String(Math.round(dmg)), color: '#ffe08a', life: 0.8, max: 0.8, size: dmg >= 400 ? 18 : 13 });
   if (u.hp <= 0) {
     B.kills++;
@@ -1369,6 +1370,7 @@ function drawEnemyBar(ctx, u, e) {
     ctx.fillStyle = 'rgba(110,190,255,0.35)'; ctx.beginPath(); ctx.arc(u.x, u.y - (u.air ? 18 : 0), e.r + 4, 0, Math.PI * 2); ctx.fill();
   }
   if (u.hit > 0) u.hit -= 1 / 60;
+  if (u.hitCd > 0) u.hitCd -= 1 / 60;
   if (u.healFx > 0) {
     ctx.strokeStyle = `rgba(140,230,120,${u.healFx * 2})`; ctx.lineWidth = 2;
     ctx.beginPath(); ctx.arc(u.x, u.y, e.r + 4, 0, Math.PI * 2); ctx.stroke();
