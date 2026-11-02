@@ -61,6 +61,12 @@ function migrate(s) {
   if (!s.stance) s.stance = 'hold';
   if (s.settings && s.settings.lowfx == null) s.settings.lowfx = false;
   if (s.tut == null) s.tut = (s.bestWave > 0 || s.buildings.length > 6) ? 99 : 0;
+  // Update 3.0
+  if (!Array.isArray(s.hof)) s.hof = [];
+  if (!s.records) s.records = {};
+  if (!Array.isArray(s.queue)) s.queue = [];
+  if (!Array.isArray(s.wargames)) s.wargames = [];
+  if (!s.doctrine) s.doctrine = 'none';
   return s;
 }
 
@@ -216,6 +222,7 @@ function completeJob(b) {
 function hqUnlockText(L) {
   const d = defenseUnlockedAt(L);
   const parts = [`Buildings can now reach level ${L}`, `storage ${fmt(HQ_STORAGE[L])}`];
+  for (const t of supportUnlockedAt(L)) parts.unshift(`Unlocked: ${DEFS[t].name}`);
   if (d) parts.unshift(`Unlocked: ${DEFS[d].name}`);
   return parts.join(' · ');
 }
@@ -258,7 +265,7 @@ function openRoadmap() {
         <div class="road-lvl">${L}</div>
         <div class="road-art" data-type="${d || ''}"></div>
         <div class="road-body">
-          <div class="road-title">${d ? DEFS[d].name : 'Command Center'}${trapsUnlockedAt(L).map(t => ` <span class="road-plus">+ ${DEFS[t].name}</span>`).join('')}</div>
+          <div class="road-title">${d ? DEFS[d].name : 'Command Center'}${trapsUnlockedAt(L).concat(supportUnlockedAt(L)).map(t => ` <span class="road-plus">+ ${DEFS[t].name}</span>`).join('')}</div>
           <div class="road-meta">Level cap ${L} · storage ${fmt(HQ_STORAGE[L])}${L > 1 ? ` · ${fmtTime(timeFor('hq', L))}` : ''}</div>
         </div>
         <div class="road-cost">${state === 'done' || state === 'now' ? `<span class="road-tag">${state === 'now' ? 'Current' : 'Done'}</span>` : costHTML(c)}</div>
@@ -457,7 +464,8 @@ function minZoom() { return Math.max(vw / (MAP_W * TILE), vh / (MAP_H * TILE)); 
 function maxZoom() { return 1.9; }
 
 function resize() {
-  dpr = Math.min(2.5, window.devicePixelRatio || 1);
+  const res = S && S.settings && S.settings.res ? S.settings.res : 1;
+  dpr = Math.max(0.5, Math.min(2.5, window.devicePixelRatio || 1) * res);
   vw = canvas.clientWidth; vh = canvas.clientHeight;
   canvas.width = Math.round(vw * dpr); canvas.height = Math.round(vh * dpr);
   cam.z = clamp(cam.z, minZoom(), maxZoom());
@@ -516,7 +524,8 @@ canvas.addEventListener('pointermove', e => {
   if (gesture.mode === 'pinch' && pointers.size >= 2) {
     const [a, b] = [...pointers.values()];
     const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
-    cam.z = clamp(gesture.z0 * dist(a, b) / gesture.d0, minZoom(), maxZoom());
+    cam.z = clamp(gesture.z0 * Math.pow(dist(a, b) / gesture.d0, S.settings.zoomspeed || 1), minZoom(), maxZoom());
+    zoomAnim = null;
     cam.x = gesture.anchor.x - (mid.x - vw / 2) / cam.z;
     cam.y = gesture.anchor.y - (mid.y - vh / 2) / cam.z;
     clampCam();
@@ -548,7 +557,7 @@ function endPointer(e) {
   if (!pointers.has(e.pointerId)) return;
   pointers.delete(e.pointerId);
   // keep gliding after a flick
-  if (gesture && gesture.mode === 'pan' && gesture.moved && pointers.size === 0 && performance.now() - (gesture.lt || 0) < 80 && gfxQuality() !== 'low') {
+  if (gesture && gesture.mode === 'pan' && gesture.moved && pointers.size === 0 && performance.now() - (gesture.lt || 0) < 80 && gfxQuality() !== 'low' && S.settings.glide !== false && !S.settings.reducemotion) {
     camVel.x = clamp(gesture.vx || 0, -3000, 3000); camVel.y = clamp(gesture.vy || 0, -3000, 3000);
   }
   if (editMode && placing && placing.moveId && gesture && gesture.mode === 'drag' && pointers.size === 0) {
@@ -571,7 +580,7 @@ canvas.addEventListener('pointercancel', endPointer);
 canvas.addEventListener('wheel', e => {
   e.preventDefault();
   const anchor = screenToWorld(e.offsetX, e.offsetY);
-  cam.z = clamp(cam.z * Math.exp(-e.deltaY * 0.0015), minZoom(), maxZoom());
+  cam.z = clamp(cam.z * Math.exp(-e.deltaY * 0.0015 * (S.settings.zoomspeed || 1)), minZoom(), maxZoom());
   cam.x = anchor.x - (e.offsetX - vw / 2) / cam.z;
   cam.y = anchor.y - (e.offsetY - vh / 2) / cam.z;
   clampCam();
@@ -585,6 +594,7 @@ function hitsGhost(w) {
 }
 
 function tap(sx, sy) {
+  if (PHOTO.on) return;
   const w = screenToWorld(sx, sy);
   if (B) { battleTap(w); return; }
   if (placing) {
@@ -609,6 +619,7 @@ function tap(sx, sy) {
     select(b.id);
   } else {
     select(null);
+    emptyTap(sx, sy);
   }
 }
 
@@ -663,6 +674,7 @@ function update(dt) {
     }
   }
   if (B) battleUpdate(dt * B.speed);
+  stormUpdate(dt);
   for (const p of particles) updateParticle(p, dt);
   if (particles.length > 900) particles.splice(0, particles.length - 900);
   particles = particles.filter(p => p.life > 0);
@@ -743,6 +755,7 @@ function draw() {
   const list = S.buildings.filter(b => !(placing && placing.moveId === b.id));
   if (gfxQuality() !== 'low') drawContactShadows(ctx, list);
   if (placing) drawGridOverlay();
+  drawCoverage(ctx);
 
   const sel = selectedId ? byId(selectedId) : null;
   if (sel && !placing) drawSelection(sel);
@@ -766,6 +779,7 @@ function draw() {
   }
 
   drawBattleGround(ctx);
+  drawLifeGround(ctx);
   drawFoliage(ctx);
   if (placing) drawGhost();
 
@@ -783,13 +797,16 @@ function draw() {
   drawParticlesFX(ctx);
   if (!S.settings.lowfx) drawBirds();
   drawBattleAir(ctx);
+  drawCargo(ctx);
+  drawLifeAir(ctx);
 
   // post-processing: lighting, bloom, colour grade, weather
   drawPostFX();
 
   // unlit overlays stay readable at night
   ctx.setTransform(dpr * z, 0, 0, dpr * z, dpr * (vw / 2 - cam.x * z + sh.x), dpr * (vh / 2 - cam.y * z + sh.y));
-  if (!placing && !B) for (const b of S.buildings) {
+  drawQueueBadges(ctx);
+  if (!placing && !B && !PHOTO.on) for (const b of S.buildings) {
     if (!hasBubble(b)) continue;
     const p = bubblePos(b);
     ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.beginPath(); ctx.arc(p.x + 2, p.y + 3, 15, 0, Math.PI * 2); ctx.fill();
@@ -875,7 +892,8 @@ function drawGhost() {
 }
 
 function frame(now) {
-  if (S.settings.lowfx && now - lastFrame < 30) { requestAnimationFrame(frame); return; }
+  if ((S.settings.lowfx || S.settings.fps === 30) && now - lastFrame < 30) { requestAnimationFrame(frame); return; }
+  fpsTick(now);
   const dt = Math.min(0.1, (now - lastFrame) / 1000);
   lastFrame = now;
   // one bad frame must never stop the game loop
@@ -888,6 +906,7 @@ function frame(now) {
     const d0 = performance.now();
     draw();
     perfSample(performance.now() - d0, dt);
+    updateMinimap();
     updateHUD();
     updateBattleHUD();
     Music.setMode(B ? 'battle' : 'base');
@@ -1034,6 +1053,7 @@ function statChips(b) {
       else out.push(`<span class="chip"><b>SPEC</b>at level ${SPEC_LEVEL}</span>`);
     }
   }
+  out.push(stormChips(b, L, nxt ? L + 1 : null));
   if (!d.trap && !d.deco) out.push(chip('HP', fmt(cur.hp), nxt && fmt(nxt.hp)));
   return out.join('');
 }
@@ -1088,7 +1108,12 @@ function buildPanel(b, up) {
     } else {
       const sub = up.ok ? `<span class="btn-sub">${costHTML(up.cost)}${up.time ? `<span class="cost">${ICON.clock}${fmtTime(up.time)}</span>` : ''}</span>`
         : `<span class="btn-sub reason">${up.cost && up.reason === 'Not enough resources' ? costHTML(up.cost) : up.reason}</span>`;
-      actions += `<button class="btn upgrade ${up.ok ? '' : 'off'}" data-act="upgrade"><span class="btn-main">Upgrade</span>${sub}</button>`;
+      const qi = queueIndex(b);
+      if (qi >= 0) actions += `<button class="btn ghost queued" data-act="unqueue"><span class="btn-main">Queued #${qi + 1}</span><span class="btn-sub">Tap to cancel</span></button>`;
+      else {
+        actions += `<button class="btn upgrade ${up.ok ? '' : 'off'}" data-act="upgrade"><span class="btn-main">Upgrade</span>${sub}</button>`;
+        if (canQueue(b, up)) actions += `<button class="btn queue-btn" data-act="queue"><span class="btn-main">Queue</span><span class="btn-sub">${(S.queue || []).length}/${QUEUE_MAX}</span></button>`;
+      }
     }
     if (DEFS[b.type].size === 1 && !up.max) {
       const same = S.buildings.filter(w => w.type === b.type && w.level === b.level && !w.job).length;
@@ -1142,6 +1167,8 @@ panel.addEventListener('click', e => {
     Sound.play('click'); save();
   }
   else if (act === 'walls-all') upgradeAllOf(b.type, b.level);
+  else if (act === 'queue') queueUpgrade(b);
+  else if (act === 'unqueue') unqueue(b);
   else if (act === 'sell') { sellArmed = true; }
   else if (act === 'sell-confirm') { sell(b); return; }
   else if (act === 'close') { select(null); return; }
@@ -1296,6 +1323,7 @@ function openBattleBrief() {
           </ul>
         </div>
       </div>
+      ${briefExtrasHTML()}
       <div class="brief-foot">
         <button class="btn battle-go" id="btn-deploy">Start battle</button>
         <button class="btn ghost" id="btn-arsenal">Arsenal</button>
@@ -1304,6 +1332,7 @@ function openBattleBrief() {
       </div>
     </div>`);
   $('#btn-deploy').addEventListener('click', () => startBattle(null));
+  wireBriefExtras(openBattleBrief);
   $('#btn-intel').addEventListener('click', () => openFieldGuide(true));
   $('#btn-arsenal').addEventListener('click', () => openArsenal(openBattleBrief));
   $('#modal-body').querySelectorAll('[data-threat]').forEach(el => el.addEventListener('click', () => {
@@ -1313,100 +1342,7 @@ function openBattleBrief() {
   }));
 }
 
-$('#btn-menu').addEventListener('click', () => {
-  openModal(`
-    <div class="settings">
-      <h2>Field manual</h2>
-      <ul class="manual">
-        <li><b>Build</b> opens the shop. Drag the outline into place, then tap the check mark.</li>
-        <li><b>Tap a building</b> to upgrade, move or sell it. Mines show a bubble when they have something to collect.</li>
-        <li><b>Drag</b> to look around and <b>pinch</b> to zoom.</li>
-        <li>Upgrade the <b>Command Center</b>: every level unlocks a new defense and lets your other buildings go one level higher. Tap it and open <b>Roadmap</b> to see all 12 levels.</li>
-        <li>Build a <b>Barracks</b> to train troops. In battle, tap a troop card and then the map to deploy; use <b>Rally</b> to move them. Survivors come home.</li>
-        <li>Tap your <b>medal counter</b> to visit the Quartermaster, and the chest icon for this month's <b>War Chest</b>.</li>
-        <li><b>Battle</b> sends endless enemy waves down the roads. Survive as long as you can; kills and cleared waves pay out, and the base is repaired afterwards.</li>
-        <li>Earn <b>medals</b> from battles, missions and promotions. Spend them to finish construction instantly or to hire more builders.</li>
-        <li>Your base saves automatically on this device.</li>
-      </ul>
-      <div class="settings-row">
-        <button class="btn ghost toggle ${S.settings.sound ? 'on' : ''}" id="btn-sound">Sound: ${S.settings.sound ? 'On' : 'Off'}</button>
-        <button class="btn ghost toggle ${S.settings.haptics ? 'on' : ''}" id="btn-haptics">Vibration: ${S.settings.haptics ? 'On' : 'Off'}</button>
-        <button class="btn ghost" id="btn-fs">Fullscreen</button>
-        <button class="btn ghost" id="btn-recenter">Recenter view</button>
-        <button class="btn ghost" id="btn-record">Service record</button>
-        <button class="btn ghost" id="btn-backup">Backup</button>
-        <button class="btn ghost toggle on" id="btn-gfx">Graphics: ${gfxLabel()}</button>
-        <button class="btn ghost toggle ${S.settings.daycycle !== false ? 'on' : ''}" id="btn-daycycle">Day &amp; night: ${S.settings.daycycle !== false ? 'Live' : 'Off'}</button>
-        <button class="btn ghost" id="btn-wardrobe">Wardrobe</button>
-        <button class="btn ghost" id="btn-layouts">Layouts</button>
-      </div>
-      <div class="settings-row slider-row">
-        <label class="field-label" for="vol-music">Music</label><input type="range" id="vol-music" min="0" max="1" step="0.05" value="${S.settings.music}">
-        <label class="field-label" for="vol-sfx">Effects</label><input type="range" id="vol-sfx" min="0" max="1" step="0.05" value="${S.settings.sfx}">
-      </div>
-      <div class="settings-row">
-        <button class="btn ghost toggle ${S.settings.colorblind ? 'on' : ''}" data-acc="colorblind">Colorblind mode: ${S.settings.colorblind ? 'On' : 'Off'}</button>
-        <button class="btn ghost toggle ${S.settings.bigtext ? 'on' : ''}" data-acc="bigtext">Large text: ${S.settings.bigtext ? 'On' : 'Off'}</button>
-        <button class="btn ghost toggle ${S.settings.lefty ? 'on' : ''}" data-acc="lefty">Left-handed: ${S.settings.lefty ? 'On' : 'Off'}</button>
-      </div>
-      <div class="settings-row theme-row">
-        <span class="field-label">Map theme</span>
-        ${Object.keys(THEMES).map(id => `<button class="btn ghost toggle ${S.theme === id ? 'on' : ''} ${hqLevel() >= THEMES[id].need ? '' : 'off'}" data-theme-pick="${id}">${THEMES[id].name}${hqLevel() >= THEMES[id].need ? '' : ` (HQ ${THEMES[id].need})`}</button>`).join('')}
-        <button class="btn danger-outline" id="btn-reset">Reset base</button>
-        <button class="btn" data-close>Done</button>
-      </div>
-    </div>`);
-  $('#btn-fs').addEventListener('click', toggleFullscreen);
-  $('#btn-sound').addEventListener('click', e => {
-    S.settings.sound = !S.settings.sound; applySettings(); save();
-    if (S.settings.sound) Sound.unlock();
-    e.currentTarget.textContent = `Sound: ${S.settings.sound ? 'On' : 'Off'}`; e.currentTarget.classList.toggle('on', S.settings.sound);
-    Sound.play('click');
-  });
-  $('#btn-haptics').addEventListener('click', e => {
-    S.settings.haptics = !S.settings.haptics; applySettings(); save();
-    e.currentTarget.textContent = `Vibration: ${S.settings.haptics ? 'On' : 'Off'}`; e.currentTarget.classList.toggle('on', S.settings.haptics);
-    buzz(30);
-  });
-  $('#btn-recenter').addEventListener('click', () => { recenter(); closeModal(); });
-  $('#btn-record').addEventListener('click', openRecord);
-  $('#btn-backup').addEventListener('click', openBackup);
-  $('#btn-wardrobe').addEventListener('click', openWardrobe);
-  $('#btn-layouts').addEventListener('click', openLayouts);
-  $('#vol-music').addEventListener('input', e => { S.settings.music = +e.target.value; applySettings(); save(); });
-  $('#vol-sfx').addEventListener('input', e => { S.settings.sfx = +e.target.value; applySettings(); save(); Sound.play('click'); });
-  $('#modal-body').querySelectorAll('[data-acc]').forEach(b => b.addEventListener('click', () => {
-    const k = b.dataset.acc; S.settings[k] = !S.settings[k]; applySettings(); save();
-    b.classList.toggle('on', S.settings[k]); b.textContent = b.textContent.replace(/: (On|Off)$/, `: ${S.settings[k] ? 'On' : 'Off'}`);
-  }));
-  $('#btn-gfx').addEventListener('click', e => {
-    const order = ['ultra', 'high', 'low'], cur = gfxQuality();
-    const next = order[(order.indexOf(cur) + 1) % order.length];
-    S.settings.lowfx = next === 'low'; S.settings.gfx = next === 'low' ? 'high' : next; S.settings.gfxManual = true; save();
-    e.currentTarget.textContent = `Graphics: ${gfxLabel()}`;
-    toast(next === 'low' ? 'Graphics: Low (battery saver)' : `Graphics: ${gfxLabel()}`, 'info');
-  });
-  $('#btn-daycycle').addEventListener('click', e => {
-    S.settings.daycycle = S.settings.daycycle === false; save();
-    e.currentTarget.textContent = `Day & night: ${S.settings.daycycle !== false ? 'Live' : 'Off'}`; e.currentTarget.classList.toggle('on', S.settings.daycycle !== false);
-  });
-  $('#modal-body').querySelectorAll('[data-theme-pick]').forEach(el => el.addEventListener('click', () => {
-    const id = el.dataset.themePick;
-    if (hqLevel() < THEMES[id].need) { toast(`Unlocks at Command Center ${THEMES[id].need}`, 'bad'); return; }
-    setTheme(id);
-    $('#modal-body').querySelectorAll('[data-theme-pick]').forEach(x => x.classList.toggle('on', x.dataset.themePick === id));
-  }));
-  const reset = $('#btn-reset');
-  reset.addEventListener('click', () => {
-    if (reset.dataset.armed) {
-      S = newBase(); applySettings(); rebuildGrid(); select(null); save(); recenter(); closeModal();
-      toast('New base established', 'good');
-    } else {
-      reset.dataset.armed = '1';
-      reset.textContent = 'Tap again to erase everything';
-    }
-  });
-});
+$('#btn-menu').addEventListener('click', () => { Sound.play('click'); openMenu(); });
 
 function gfxLabel() { const q = gfxQuality(); return q === 'ultra' ? 'Ultra' : q === 'high' ? 'High' : 'Low'; }
 
@@ -1416,6 +1352,7 @@ function applySettings() {
   Sound.setSfx(S.settings.sfx == null ? 1 : S.settings.sfx);
   Music.setVolume(S.settings.music == null ? 0.5 : S.settings.music);
   applyAccessibility();
+  applyStormSettings();
 }
 
 /* ----- Walls and traps: upgrade a whole set ----- */
@@ -1529,6 +1466,7 @@ function openBuilders() {
       <h2>Builders</h2>
       <p class="lead">You have ${S.builders} builder${S.builders > 1 ? 's' : ''}. Each one can work on one construction job at a time. ${busyBuilders()} ${busyBuilders() === 1 ? 'is' : 'are'} busy right now.</p>
       ${canHire ? `<p class="lead">Hire builder #${next} for ${cost} medals. You have ${S.medals}.</p>` : '<p class="lead">Your construction crew is at full strength.</p>'}
+      ${queueHTML()}
       <div class="settings-row">
         ${canHire ? `<button class="btn medal-btn ${S.medals >= cost ? '' : 'off'}" id="btn-hire"><span class="btn-main">Hire</span><span class="btn-sub">${ICON.medal}${cost}</span></button>` : ''}
         <button class="btn ghost" data-close>Close</button>
@@ -1802,6 +1740,9 @@ function start(hotData) {
   rebuildGrid();
   applySettings();
   initBattleUI();
+  initStormBattleUI();
+  initBasecamp();
+  initSettingsUI();
   $('#btn-missions').addEventListener('click', () => { if (!B) { Sound.play('click'); openMissions(); } });
   $('#builders').addEventListener('click', () => { if (!B) { Sound.play('click'); openBuilders(); } });
   $('#hq-badge').addEventListener('click', () => { if (!B) openRename(); });
@@ -1811,7 +1752,7 @@ function start(hotData) {
   $('#btn-gift').addEventListener('click', () => { if (!B) { Sound.play('click'); openLogin(); } });
   $('#btn-chest').addEventListener('click', () => { if (!B) { Sound.play('click'); openChest(); } });
   $('#medals').addEventListener('click', () => { if (!B) { Sound.play('click'); openQuartermaster(); } });
-  setTimeout(() => { if (!B && modal.hidden && !showSurpriseReport() && !maybeShowWhatsNew2()) maybeShowWhatsNew(); }, 700);
+  setTimeout(() => { if (!B && modal.hidden && !showSurpriseReport() && !maybeShowWhatsNew3() && !maybeShowWhatsNew2()) maybeShowWhatsNew(); }, 700);
   $('#btn-hub').addEventListener('click', () => { Sound.play('click'); openHub(); });
   $('#edit-done').addEventListener('click', () => setEditMode(false));
   Music.start();

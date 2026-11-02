@@ -70,6 +70,7 @@ function factionHp(type) {
 /* ---------------- Stealth, jammers and supply trucks ---------------- */
 function updateStealth(u) {
   u.revealed = false;
+  if (inFlare(u.x, u.y)) { u.revealed = true; return; }
   for (const b of S.buildings) {
     if (b._dead || b.level < 1) continue;
     const d = DEFS[b.type];
@@ -573,6 +574,9 @@ function openHub() {
     { id: 'wardrobe', name: 'Wardrobe', sub: 'Skins, flags and camo', fn: openWardrobe },
     { id: 'layouts', name: 'Layouts', sub: 'Save and edit your base', fn: openLayouts },
     { id: 'guide', name: 'Enemy guide', sub: `${Object.keys(ENEMIES).length} unit types`, fn: () => openFieldGuide(false) },
+    { id: 'doctrine', name: 'Doctrine', sub: doctrineUnlocked() ? doctrine().name : `Command Center ${DOCTRINE_HQ}`, fn: () => openDoctrines(openHub) },
+    { id: 'hof', name: 'Hall of Fame', sub: (S.hof || []).length ? `Best run: wave ${S.hof[0].wave}` : 'Your best runs', fn: () => openHallOfFame(openHub) },
+    { id: 'coverage', name: 'Coverage view', sub: 'Find gaps in your defenses', fn: startCoverage },
   ];
   openModal(`
     <div class="settings">

@@ -132,6 +132,14 @@ Most new screens live under the Operations button in the top bar.
 **Buildings and feel:** 3D buildings with sunlit edges and shaded walls · soft contact shadows · a hologram preview when placing buildings · camera keeps gliding after a flick · glass-style HUD, glossy buttons and a splash screen.
 **Settings:** Menu → Graphics (Ultra, High or Low) and Day & night (Live or Off). On slower phones the game steps down from Ultra by itself until you pick a level.
 
+## Update 3.0: Storm Front
+
+**Settings menu:** a tabbed Settings screen (menu button, top right) covering graphics quality, resolution, frame rate, day and night, weather effects, bloom, living base, screen shake, damage numbers, health bars and an FPS counter; music and effect volumes, vibration and background mute; starting battle speed, minimap, tap-to-focus, next-wave preview, auto-pause and cargo drones; zoom speed, camera glide and double-tap zoom; colorblind mode, large text, left-handed layout, reduce motion and a high-contrast HUD; backup, save info, tutorial replay and reset.
+**Battle:** pause menu · battlefield minimap · focus fire (tap an enemy) · Illumination Flare ability · supply drops you tap to open · doctrines (Fortress, Blitzkrieg, Air Superiority, Big Guns) · War Games modifiers that stack for extra loot.
+**New buildings:** Repair Bay with repair drones (HQ 5) · Shield Generator with an energy dome (HQ 8) · Missile Silo that charges a strategic missile you aim yourself (HQ 9).
+**New enemies:** Riot Troopers with ballistic shields · Hovercraft that come up the river · Kamikaze Drones · EMP Troopers that knock defenses offline · Assault Mechs · Paratroopers dropped by transport planes · Field Officers who rally nearby troops · the Titan Mech boss on every tenth wave.
+**Base and records:** Hall of Fame with your ten best runs and personal records · after-action report with an MVP defense, damage chart and kills by enemy type · photo mode with filters, time of day, weather and a shutter · coverage view for ground and air · build queue (three upgrades) · cargo drones that collect for you from HQ 4 · a living base with patrols, a jeep and passing helicopters.
+
 ## Code layout
 
 - `js/data.js` – building stats, costs, limits per HQ level, wave previews
@@ -146,5 +154,8 @@ Most new screens live under the Operations button in the top bar.
 - `js/hero.js` – heroes: movement, combat, abilities, levels and the hero screen
 - `js/campaign.js` – campaign missions: operation map, briefings, results and stars
 - `js/battle.js` – battle mode: waves, enemy pathing (flow field), turret fire, rewards
+- `js/storm.js` – Update 3.0 battle systems: new enemies and their art, Repair Bay, Shield Generator, Missile Silo, flares, supply drops, focus fire, minimap, pause menu, doctrines, War Games, Hall of Fame, after-action report
+- `js/basecamp.js` – Update 3.0 base systems: photo mode, coverage view, build queue, cargo drones, living base, new building art
+- `js/settings.js` – main menu and the tabbed Settings screen
 - `js/game.js` – state, saving, placement, input, HUD and main loop
 - `style.css` – HUD, panels, shop and modals

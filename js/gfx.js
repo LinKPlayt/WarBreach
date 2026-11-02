@@ -484,12 +484,19 @@ function gfxExplosion(x, y, size) {
 }
 
 /* ---------------- Time of day, lighting and bloom ---------------- */
+const TOD_PRESETS = {
+  day: { dark: 0, grade: [255, 225, 170], gradeA: 0.18, id: 'day' },
+  dusk: { dark: 0.32, grade: [255, 140, 70], gradeA: 0.4, id: 'dusk' },
+  night: { dark: 0.6, grade: [70, 100, 190], gradeA: 0.45, id: 'night' },
+};
 function timeOfDay() {
+  if (typeof PHOTO !== 'undefined' && PHOTO.on && PHOTO.tod !== 'auto') return TOD_PRESETS[PHOTO.tod];
   if (B && B.daytime) {
     const id = B.daytime.id;
     return id === 'night' ? { dark: 0.62, grade: [70, 100, 190], gradeA: 0.45, id } : id === 'dusk' ? { dark: 0.32, grade: [255, 140, 70], gradeA: 0.4, id } : { dark: 0, grade: [255, 225, 170], gradeA: 0.18, id };
   }
-  if (S.settings.daycycle === false) return { dark: 0, grade: [255, 225, 170], gradeA: 0.18, id: 'day' };
+  if (S.settings.daycycle === false) return TOD_PRESETS.day;
+  if (S.settings.daycycle === 'night') return TOD_PRESETS.night;
   const d = new Date(), h = d.getHours() + d.getMinutes() / 60;
   // dawn 5-7, day 7-17.5, dusk 17.5-20, night 20-5
   if (h >= 7 && h < 17.5) return { dark: 0, grade: [255, 225, 170], gradeA: 0.18, id: 'day' };
@@ -528,6 +535,7 @@ function gatherLights(dark) {
     for (const b of S.buildings) if (!b._dead && b._maxhp && b._hp < b._maxhp * 0.3 && !isPassive(b.type) && b.type !== 'wall') { const c = centerOf(b); L.push({ x: c.x, y: c.y, r: 70, i: 0.7, c: C.fire, hot: true }); }
   }
   for (let i = 0; i < particles.length; i += 3) { const p = particles[i]; if (p.glow) L.push({ x: p.x, y: p.y, r: p.r * 7, i: 0.35 * clamp(p.life / p.max, 0, 1), c: C.fire, hot: true }); }
+  stormLights(L, C);
   return L;
 }
 
@@ -545,7 +553,7 @@ function worldTransform(c2, k) {
 
 // Post-processing: darkness with real light cut-outs, coloured glow, bloom, grade, grain.
 function drawPostFX() {
-  const q = gfxQuality(), tod = timeOfDay();
+  const q = gfxQuality(), tod = timeOfDay(), post = S.settings.postfx !== false;
   ensureBuffers();
   const lights = (tod.dark > 0.02 || (B && q !== 'low')) ? gatherLights(tod.dark) : [];
 
@@ -570,7 +578,7 @@ function drawPostFX() {
   }
 
   // bloom: bright things bleed light (a tiny buffer upscaled acts as a free blur)
-  if (q !== 'low' && B) {
+  if (q !== 'low' && B && post) {
     const bc = GFX.bloomCtx;
     bc.setTransform(1, 0, 0, 1, 0, 0); bc.clearRect(0, 0, GFX.bloomCv.width, GFX.bloomCv.height);
     bc.globalCompositeOperation = 'lighter';
@@ -590,20 +598,22 @@ function drawPostFX() {
 
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   // colour grade
-  if (q !== 'low') {
+  if (q !== 'low' && post) {
     ctx.globalCompositeOperation = 'soft-light';
     ctx.fillStyle = rgbStr(tod.grade, tod.gradeA); ctx.fillRect(0, 0, vw, vh);
     ctx.globalCompositeOperation = 'source-over';
   }
   drawWeather();
-  if (q === 'ultra') {
+  if (q === 'ultra' && post) {
     if (!GFX.grainPat) GFX.grainPat = ctx.createPattern(GFX.grainCv, 'repeat');
     ctx.save(); ctx.globalAlpha = 0.05; ctx.globalCompositeOperation = 'overlay';
     ctx.translate((Math.random() * 160) | 0, (Math.random() * 160) | 0);
     ctx.fillStyle = GFX.grainPat; ctx.fillRect(-160, -160, vw + 320, vh + 320);
     ctx.restore();
   }
-  if (B && B.empFlash > 0) { ctx.fillStyle = `rgba(150,210,255,${B.empFlash})`; ctx.fillRect(0, 0, vw, vh); }
+  const calm = S.settings.reducemotion ? 0.3 : 1;
+  if (B && B.empFlash > 0) { ctx.fillStyle = `rgba(150,210,255,${B.empFlash * calm})`; ctx.fillRect(0, 0, vw, vh); }
+  if (B && B.nukeFlash > 0) { ctx.fillStyle = `rgba(255,248,230,${Math.min(0.92, B.nukeFlash) * calm})`; ctx.fillRect(0, 0, vw, vh); }
 }
 
 // Searchlight decorations sweep the dark.
@@ -624,8 +634,11 @@ function drawSearchBeams(dark) {
 /* ---------------- Weather (screen space) ---------------- */
 function drawWeather() {
   const q = gfxQuality();
-  const rain = B && B.weather && B.weather.id === 'rain', fog = B && B.weather && B.weather.id === 'fog';
-  const snow = S.theme === 'winter';
+  const photoW = typeof PHOTO !== 'undefined' && PHOTO.on && PHOTO.weather !== 'auto' ? PHOTO.weather : null;
+  if (!photoW && S.settings.weatherfx === false) return;
+  const wid = photoW || (B && B.weather ? B.weather.id : 'clear');
+  const rain = wid === 'rain', fog = wid === 'fog';
+  const snow = photoW ? photoW === 'snow' : S.theme === 'winter';
   if (fog) {
     const t = tSec * 8;
     ctx.globalAlpha = 0.34;

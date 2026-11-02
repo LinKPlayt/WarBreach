@@ -434,7 +434,15 @@ function waveComposition(n) {
   if (n >= 12) list.push({ type: 'stealth', count: Math.floor((n - 10) / 2) });
   if (n >= 13) list.push({ type: 'supply', count: Math.floor((n - 11) / 4) + 1 });
   if (n >= 14) list.push({ type: 'jammer', count: Math.floor((n - 12) / 5) + 1 });
-  if (isBossWave(n)) list.push({ type: 'siege', count: 1 + Math.floor(n / 15) });
+  // Update 3.0 forces
+  if (n >= 4 && n % 2 === 0) list.push({ type: 'officer', count: 1 + Math.floor(n / 20) });
+  if (n >= 7) list.push({ type: 'riot', count: Math.floor((n - 5) / 2) });
+  if (n >= 9) list.push({ type: 'hover', count: Math.floor((n - 7) / 4) + 1 });
+  if (n >= 11) list.push({ type: 'kamikaze', count: Math.floor((n - 9) / 2) });
+  if (n >= 15) list.push({ type: 'emptrooper', count: Math.floor((n - 13) / 3) + 1 });
+  if (n >= 16) list.push({ type: 'walker', count: Math.floor((n - 14) / 4) + 1 });
+  // boss waves: a Siege Tank every fifth wave, a Titan Mech every tenth
+  if (isBossWave(n)) list.push(n % 10 === 0 ? { type: 'titan', count: Math.max(1, Math.floor(n / 20)) } : { type: 'siege', count: 1 + Math.floor(n / 15) });
   return list;
 }
 
@@ -442,6 +450,7 @@ function isBossWave(n) { return n % 5 === 0; }
 
 // First wave in which each enemy type appears (for the field guide and "new enemy" alerts).
 function firstWaveOf(type) {
+  if (type === 'para') return 12; // dropped by transport planes
   for (let n = 1; n <= 60; n++) if (waveComposition(n).some(g => g.type === type && g.count > 0)) return n;
   return 99;
 }
@@ -931,3 +940,122 @@ const CAMO = {
   tiger: { name: 'Tiger Stripe', color: '#4a5a2a', price: 45 },
 };
 const UPDATE2_VERSION = '2.0';
+
+/* =================== Update 3.0: Storm Front =================== */
+const UPDATE3_VERSION = '3.0';
+
+// New support buildings
+Object.assign(DEFS, {
+  repairbay: {
+    name: 'Repair Bay', code: 'RB', cat: 'support', size: 2, max: MAX_LEVEL,
+    desc: 'Launches repair drones during battle that patch up damaged buildings around it.',
+    cost: { base: { gold: 3500, steel: 3000 }, growth: 1.55 },
+    time: { base: 90, growth: 1.7 },
+    hp: { base: 800, growth: 1.25 },
+    heal: { base: 16, growth: 1.22 }, healRange: 5, drones: 2,
+  },
+  shieldgen: {
+    name: 'Shield Generator', code: 'SG', cat: 'support', size: 2, max: MAX_LEVEL,
+    desc: 'Projects an energy dome that soaks up damage for every building under it. Recharges a few seconds after it breaks.',
+    cost: { base: { gold: 8000, steel: 9000 }, growth: 1.5 },
+    time: { base: 150, growth: 1.65 },
+    hp: { base: 900, growth: 1.25 },
+    shield: { base: 1400, growth: 1.28 }, shieldRange: 3.6, recharge: 12,
+  },
+  silo: {
+    name: 'Missile Silo', code: 'MS', cat: 'support', size: 2, max: MAX_LEVEL,
+    desc: 'Charges a strategic missile during battle. When it is ready, tap Launch and pick a target for a devastating strike.',
+    cost: { base: { gold: 14000, steel: 16000 }, growth: 1.45 },
+    time: { base: 180, growth: 1.6 },
+    hp: { base: 1400, growth: 1.25 },
+    nuke: { base: 2600, growth: 1.25 }, charge: 75, radius: 3.4,
+  },
+});
+Object.assign(LIMITS, {
+  repairbay: [0, 0, 0, 0, 0, 1, 1, 1, 2, 2, 2, 2, 2],
+  shieldgen: [0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 2, 2],
+  silo:      [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1],
+});
+function repairRate(L) { return Math.round(grow(DEFS.repairbay.heal, L)); }
+function shieldHp(L) { return Math.round(grow(DEFS.shieldgen.shield, L) / 10) * 10; }
+function nukeDamage(L) { return Math.round(grow(DEFS.silo.nuke, L) / 10) * 10; }
+function siloCharge(L) { return Math.max(40, DEFS.silo.charge - (L - 1) * 3); }
+
+// New enemies
+Object.assign(ENEMIES, {
+  riot:       { name: 'Riot Trooper', hp: 150, speed: 0.8, dmg: 8, rate: 1, range: 1.8, bounty: 10, r: 7, shield: 0.65 },
+  hover:      { name: 'Hovercraft', hp: 700, speed: 1.4, dmg: 10, rate: 2.5, range: 2.8, bounty: 30, r: 15, vehicle: true, hover: true, carries: { type: 'rifleman', count: 3 } },
+  kamikaze:   { name: 'Kamikaze Drone', hp: 70, speed: 2.4, dmg: 150, rate: 1, range: 0.7, splash: 1.0, bounty: 10, r: 7, air: true, kamikaze: true },
+  emptrooper: { name: 'EMP Trooper', hp: 130, speed: 0.95, dmg: 6, rate: 0.35, range: 3.2, bounty: 16, r: 7, emp: 3 },
+  walker:     { name: 'Assault Mech', hp: 1700, speed: 0.5, dmg: 55, rate: 0.9, range: 3.6, splash: 0.6, bounty: 70, r: 16, vehicle: true, armor: 12, walker: true },
+  para:       { name: 'Paratrooper', hp: 75, speed: 1.1, dmg: 7, rate: 1, range: 2.2, bounty: 6, r: 6 },
+  officer:    { name: 'Field Officer', hp: 260, speed: 0.95, dmg: 9, rate: 1, range: 2.6, bounty: 60, r: 7, officer: true, auraRange: 3 },
+  titan:      { name: 'Titan Mech', hp: 5200, speed: 0.3, dmg: 150, rate: 0.4, range: 4.5, splash: 1.3, bounty: 450, r: 28, vehicle: true, boss: true, armor: 20, walker: true },
+});
+Object.assign(ENEMY_NOTES, {
+  riot: 'Carries a ballistic shield: bullets do 65% less damage. Use explosives, fire or lasers.',
+  hover: 'Skims up the river and lands behind your lines. Three riflemen jump out when it is destroyed.',
+  kamikaze: 'A fast suicide drone that dives into your buildings and explodes. Shoot it down early.',
+  emptrooper: 'Fires EMP bolts that knock nearby defenses offline for a few seconds.',
+  walker: 'Heavily armored two-legged mech. Light guns barely scratch it.',
+  para: 'Dropped by transport planes right inside your base.',
+  officer: 'Commands nearby troops: they move and shoot faster. Worth a big bounty.',
+  titan: 'Boss of every tenth wave. A colossal mech that stomps everything around it.',
+});
+
+// New commander ability
+ABILITIES.flare = { name: 'Illumination Flare', short: 'Flare', cooldown: 30, hq: 2, target: true, desc: 'Lights up an area for 12 seconds: reveals stealth units and your defenses deal 25% more damage inside it.' };
+
+// New achievements
+ACHIEVEMENTS.push(
+  { id: 'nukes', name: 'Doomsday', stat: s => s.stats.nukes || 0, tiers: [1, 10, 50], medals: [5, 15, 40], unit: 'strategic missiles launched' },
+  { id: 'crates', name: 'Scavenger', stat: s => s.stats.crates || 0, tiers: [5, 40, 200], medals: [5, 12, 30], unit: 'battle supply drops opened' },
+  { id: 'officers', name: 'Headhunter', stat: s => s.stats.officers || 0, tiers: [5, 50, 250], medals: [5, 15, 40], unit: 'enemy officers eliminated' },
+  { id: 'titans', name: 'Titan Breaker', stat: s => s.stats.titans || 0, tiers: [1, 5, 25], medals: [10, 25, 60], unit: 'Titan Mechs destroyed' },
+);
+
+// Doctrines: one battle philosophy at a time (Command Center 6+).
+const DOCTRINE_HQ = 6;
+const DOCTRINES = [
+  { id: 'none', name: 'Standard Issue', desc: 'No doctrine. Balanced forces.', mods: {} },
+  { id: 'fortress', name: 'Fortress', desc: '+20% building health, troops deal 10% less damage', mods: { bldHp: 0.2, troopDmg: -0.1 } },
+  { id: 'blitz', name: 'Blitzkrieg', desc: '+25% troop damage and speed, buildings have 10% less health', mods: { troopDmg: 0.25, troopSpeed: 0.25, bldHp: -0.1 } },
+  { id: 'air', name: 'Air Superiority', desc: 'Abilities recharge 20% faster, +30% damage to aircraft', mods: { cd: 0.8, antiAir: 0.3 } },
+  { id: 'artillery', name: 'Big Guns', desc: '+20% splash damage from every defense, -10% fire rate', mods: { splash: 0.2, rate: -0.1 } },
+];
+
+// War Games: optional modifiers for the endless battle. Each adds loot.
+const WARGAMES = [
+  { id: 'fast', name: 'Blitz', desc: 'Enemies move 35% faster', loot: 0.25 },
+  { id: 'armored', name: 'Hardened', desc: 'Enemies have 50% more health', loot: 0.35 },
+  { id: 'noair', name: 'Grounded', desc: 'No airstrikes', loot: 0.15 },
+  { id: 'norepair', name: 'No Medics', desc: 'No Field Repair', loot: 0.15 },
+  { id: 'glass', name: 'Glass Walls', desc: 'Walls and gates have half health', loot: 0.25 },
+  { id: 'darkness', name: 'Blackout', desc: 'Every battle is fought at night', loot: 0.2 },
+];
+const WARGAMES_MAX = 3;
+
+// Supply drops that parachute into the battlefield
+const SUPPLY_LOOT = [
+  { id: 'gold', name: 'Gold cache', weight: 4 },
+  { id: 'steel', name: 'Steel cache', weight: 3 },
+  { id: 'recharge', name: 'Ability recharge', weight: 2 },
+  { id: 'repair', name: 'Repair kit', weight: 2 },
+  { id: 'squad', name: 'Rifle squads', weight: 2 },
+  { id: 'medal', name: 'Medal', weight: 1 },
+];
+
+// Photo mode filters
+const PHOTO_FILTERS = [
+  { id: 'none', name: 'Natural', css: '' },
+  { id: 'noir', name: 'Noir', css: 'grayscale(1) contrast(1.25)' },
+  { id: 'vintage', name: 'Vintage', css: 'sepia(0.65) contrast(1.05) saturate(0.85)' },
+  { id: 'nv', name: 'Night vision', css: 'grayscale(1) sepia(1) hue-rotate(60deg) saturate(3.5) brightness(1.1) contrast(1.2)' },
+  { id: 'thermal', name: 'Thermal', css: 'invert(1) hue-rotate(180deg) saturate(2.5) contrast(1.3)' },
+  { id: 'vivid', name: 'Vivid', css: 'saturate(1.45) contrast(1.12)' },
+];
+
+// Update 3.0 support buildings a Command Center level unlocks (for the roadmap and level-up notes).
+function supportUnlockedAt(L) {
+  return ['repairbay', 'shieldgen', 'silo'].filter(t => LIMITS[t][L] > 0 && LIMITS[t][L - 1] === 0);
+}

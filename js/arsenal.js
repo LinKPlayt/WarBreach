@@ -8,6 +8,7 @@ const AB_ICONS = {
   artillery: '<circle cx="5" cy="13" r="2.5" fill="currentColor"/><circle cx="12" cy="9" r="2.5" fill="currentColor"/><circle cx="15" cy="15" r="2.5" fill="currentColor"/><path d="M3 4l3 4M10 2l2 4M16 4l-1 5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>',
   smoke: '<circle cx="7" cy="11" r="4.5" fill="currentColor"/><circle cx="12.5" cy="9" r="5" fill="currentColor"/><circle cx="14" cy="13.5" r="3.5" fill="currentColor"/>',
   emp: '<path d="M11 1L4 11h5l-1 8 8-11h-5z" fill="currentColor"/>',
+  flare: '<path d="M10 1l1.6 4.2L16 4l-2.6 3.6L18 10l-4.6 1.2L16 16l-4.4-2.4L10 19l-1.6-5.4L4 16l2.6-4.8L2 10l4.6-2.4L4 4l4.4 1.2z" fill="currentColor"/>',
   hero: '<path d="M4 11a6 6 0 0 1 12 0v1H4z" fill="currentColor"/><path d="M3 12.5h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
 };
 
@@ -113,6 +114,7 @@ function fireTargeted(k, w) {
   else if (k === 'artillery') callArtillery(w);
   else if (k === 'smoke') dropSmoke(w);
   else if (k === 'paradrop') paradrop(w);
+  else if (k === 'flare') dropFlare(w);
 }
 
 /* ---------------- Ability effects ---------------- */

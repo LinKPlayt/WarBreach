@@ -50,6 +50,7 @@ function startBattle(mission) {
   computeAuras();
   buildAbilityBar();
   buildDeployBar();
+  stormBattleStart();
   S.stats.battles = (S.stats.battles || 0) + 1;
   if (S.tut != null && S.tut < 9) tutorialEvent('battle');
   S.battles = (S.battles || 0) + 1;
@@ -77,10 +78,11 @@ function startWave(n) {
   B.spawnT = 0.5;
   B.spawnIdx = 0;
   B.waveSize = B.queue.length;
+  stormWaveStart(n);
   if (B.mission) {
     const boss = comp.some(g => ENEMIES[g.type].boss);
     const last = n === B.mission.waves.length;
-    banner(`Wave ${n} of ${B.mission.waves.length}`, boss ? 'Siege Tank inbound' : last ? 'Final wave' : `${B.waveSize} hostiles inbound`);
+    banner(`Wave ${n} of ${B.mission.waves.length}`, boss ? `${ENEMIES[comp.find(g => ENEMIES[g.type].boss).type].name} inbound` : last ? 'Final wave' : `${B.waveSize} hostiles inbound`);
     Sound.play(boss ? 'boss' : 'alarm');
     return;
   }
@@ -90,7 +92,7 @@ function startWave(n) {
     banner(`Wave ${n}`, `New enemy: ${fresh2.join(', ')}`);
     Sound.play('alarm');
   } else if (isBossWave(n)) {
-    banner(`Boss wave ${n}`, 'Siege Tank inbound. Focus your heaviest guns');
+    banner(`Boss wave ${n}`, `${n % 10 === 0 ? 'Titan Mech' : 'Siege Tank'} inbound. Focus your heaviest guns`);
     Sound.play('boss'); buzz([80, 60, 80]);
   } else {
     banner(`Wave ${n}`, fresh ? 'New attack route opened' : `${B.waveSize} hostiles inbound`);
@@ -108,10 +110,9 @@ function endBattle(reason) {
   if (record) S.bestWave = survived;
   save();
   Sound.play(reason === 'retreat' ? 'win' : 'lose');
-  const names = { hq: 'Command Center gun', airstrike: 'Airstrikes', artillery: 'Artillery barrage', troops: 'Your troops', hero: B.hero ? HEROES[B.hero.id].name : 'Hero' };
-  const top = Object.entries(B.dmgBy).sort((a, b) => b[1] - a[1]).slice(0, 4);
-  const total = top.reduce((a, [, v]) => a + v, 0) || 1;
-  const report = top.length ? top.map(([k, v]) => `<li><span>${names[k] || DEFS[k].name}</span><b>${fmt(v)} <small>${Math.round(v / total * 100)}%</small></b></li>`).join('') : '<li><span>No damage dealt</span><b>0</b></li>';
+  const rank = recordRun();
+  const fresh = (B.freshRecords || []).map(r => `<li><span>New record</span><b>${r}</b></li>`).join('');
+  save();
   const title = reason === 'retreat' ? 'Forces withdrawn' : 'Base overrun';
   const line = reason === 'retreat'
     ? 'You pulled back before the next assault. Everything you earned is in storage.'
@@ -130,6 +131,7 @@ function endBattle(reason) {
             <li><span>Waves survived</span><b>${survived}</b></li>
             <li><span>Enemies destroyed</span><b>${B.kills}</b></li>
             <li><span>Best ever</span><b>${S.bestWave}${record ? ' (new record)' : ''}</b></li>
+            ${rank ? `<li><span>Hall of Fame</span><b>#${rank} of 10</b></li>` : ''}${fresh}
           </ul>
         </div>
         <div>
@@ -141,13 +143,15 @@ function endBattle(reason) {
           </ul>
         </div>
       </div>
-      <h3 class="report-h">Damage by defense</h3>
-      <ul class="units report">${report}</ul>
+      ${stormReportHTML()}
       <div class="brief-foot">
         <span class="soon">Spend your loot on upgrades, then try to beat wave ${S.bestWave + 1}.</span>
+        <button class="btn ghost" id="btn-hof">Hall of Fame</button>
         <button class="btn" data-close>Return to base</button>
       </div>
     </div>`, leaveBattle);
+  decorateReport();
+  $('#btn-hof').addEventListener('click', () => { leaveBattle(); openHallOfFame(); });
 }
 
 // Called when the after-action report closes: repair the base and go back to building.
@@ -158,6 +162,7 @@ function leaveBattle() {
   awardChestStars(B.battleStars);
   for (const b of S.buildings) { delete b._hp; delete b._maxhp; delete b._dead; delete b._cd; delete b._tgt; delete b._heal; delete b._beamOn; b._flash = 0; }
   B = null;
+  updateNukeButton(true);
   document.body.classList.remove('in-battle', 'hq-danger', 'targeting', 'no-airstrike', 'deploying');
   $('#banner').hidden = true;
   rebuildGrid();
@@ -241,6 +246,7 @@ function battleUpdate(dt) {
   updateTroops(dt);
   updateBattleFX(dt);
   updateSmokes(dt);
+  stormBattleUpdate(dt);
 
   if (B.phase === 'break') {
     B.breakT -= dt;
@@ -251,7 +257,7 @@ function battleUpdate(dt) {
       spawnEnemy(B.queue.shift());
       B.spawnT = Math.max(0.35, 0.95 - B.wave * 0.04);
     }
-    if (!B.queue.length && !B.units.length) waveCleared();
+    if (!B.queue.length && !B.units.length && !stormPending()) waveCleared();
   }
 
   for (const k in B.ab) B.ab[k] = Math.max(0, B.ab[k] - dt);
@@ -308,6 +314,7 @@ function spawnEnemy(type) {
     ox: (Math.random() - 0.5) * 16, oy: (Math.random() - 0.5) * 16,
     tgt: null, retarget: 0, air: !!e.air, moving: true,
   });
+  stormSpawned(B.units[B.units.length - 1], e);
 }
 
 function waveCleared() {
@@ -381,7 +388,8 @@ function updateEnemy(u, dt) {
   if (e.supplyAura) supplyPulse(u, dt);
   if (u.boostT > 0) { u.boostT -= dt; u.slow *= 1.2; }
   if (u.air && B.faction && B.faction.airSpeed) u.slow *= B.faction.airSpeed;
-  const dmgMul = (u.elite ? ELITE.dmg : 1) * (u.dmgK || 1) * (u.smoked && Math.random() < 0.5 ? 0 : 1);
+  if (stormEnemyUpdate(u, e, dt)) return;
+  const dmgMul = (u.elite ? ELITE.dmg : 1) * (u.dmgK || 1) * (u.cmdT > 0 ? 1.2 : 1) * (u.smoked && Math.random() < 0.5 ? 0 : 1);
   if (!u.air && !e.vehicle) {
     const tile = buildingAtTile(Math.floor(u.x / TILE), Math.floor(u.y / TILE));
     if (tile && tile.type === 'wire' && tile.level >= 1) {
@@ -514,6 +522,8 @@ function updateEnemy(u, dt) {
 function damageBuilding(b, dmg, attacker) {
   if (!b || b._dead) return;
   if (B.practice) dmg *= 0.5;
+  dmg = shieldAbsorb(b, dmg);
+  if (dmg <= 0) return;
   b._hp -= dmg;
   if (b._hp <= 0) {
     b._hp = 0;
@@ -544,15 +554,17 @@ function damageEnemy(u, dmg, src) {
   const ed = ENEMIES[u.type];
   if (ed.armor) dmg = Math.max(dmg * 0.25, dmg - ed.armor);
   if (u.air && B.bonus && B.bonus.antiAir) dmg *= 1 + B.bonus.antiAir;
+  dmg = stormDamageMod(u, ed, dmg, src);
   if (src) B.dmgBy[src] = (B.dmgBy[src] || 0) + Math.min(dmg, u.hp);
   if (B.raid && ed.raidBoss) raidHit(u, Math.min(dmg, u.hp));
   u.hp -= dmg;
   u.hit = 0.1;
-  if (dmg >= 120) floaters.push({ x: u.x + (Math.random() - 0.5) * 10, y: u.y - 24, text: String(Math.round(dmg)), color: '#ffe08a', life: 0.8, max: 0.8, size: dmg >= 400 ? 18 : 13 });
+  if (dmg >= 120 && S.settings.dmgnums !== false) floaters.push({ x: u.x + (Math.random() - 0.5) * 10, y: u.y - 24, text: String(Math.round(dmg)), color: '#ffe08a', life: 0.8, max: 0.8, size: dmg >= 400 ? 18 : 13 });
   if (u.hp <= 0) {
     B.kills++;
     if (B.practice) { if (ed.vehicle || ed.air) explosion(u.x, u.y, ed.r * 1.6); return; }
     S.stats.kills++;
+    stormEnemyKilled(u, ed);
     orderEvent('kill', 1);
     if (u.air) orderEvent('killair', 1);
     if (ed.vehicle) orderEvent('killveh', 1);
@@ -583,7 +595,7 @@ function damageEnemy(u, dmg, src) {
     if (e.boss) {
       S.stats.bosses++; B.bosses++;
       explosion(u.x, u.y, 60); Sound.play('bigboom'); buzz([100, 50, 150]);
-      banner('Siege Tank destroyed', `+${e.bounty} gold`);
+      banner(`${e.name} destroyed`, `+${e.bounty} gold`);
     } else if (e.vehicle || e.air) Sound.play('boom');
     addLoot('gold', e.bounty * (1 + (B.bonus ? B.bonus.loot : 0)));
     if (e.vehicle || e.air) addLoot('steel', Math.round(e.bounty * 0.6));
@@ -688,6 +700,7 @@ function weaponOf(b) {
 function updateDefense(b, dt) {
   const w = weaponOf(b);
   if (!w) return;
+  if (b._stun > 0) return; // knocked out by an EMP Trooper
   if (b._flash > 0) b._flash -= dt;
   b._cd -= dt;
   const c = centerOf(b);
@@ -705,7 +718,8 @@ function updateDefense(b, dt) {
     b._tgt = null;
     const pr = b.priority || 'close';
     let best = -Infinity;
-    for (const u of B.units) {
+    if (B.focus && inRange(B.focus)) b._tgt = B.focus;
+    else for (const u of B.units) {
       if (!inRange(u)) continue;
       let score;
       if (pr === 'strong') score = u.hp;
@@ -963,7 +977,7 @@ function splashDamage(x, y, radiusTiles, dmg, hitsAir, src) {
   for (const u of B.units) {
     if (u.hp <= 0 || (u.air && !hitsAir)) continue;
     const d = Math.hypot(u.x - x, u.y - y);
-    if (d <= r) damageEnemy(u, dmg * (d < r * 0.4 ? 1 : 0.6), src);
+    if (d <= r) damageEnemy(u, dmg * (d < r * 0.4 ? 1 : 0.6) * (1 + ((B.bonus && B.bonus.splash) || 0)), src);
   }
 }
 
@@ -972,6 +986,7 @@ function splashDamage(x, y, radiusTiles, dmg, hitsAir, src) {
 // Taps on the map during battle: aim an ability, deploy troops, set a rally point, or move the hero.
 function battleTap(w) {
   if (!B) return;
+  if (stormTap(w)) return;
   if (B.targeting && B.targeting.startsWith('item:')) { fireItemAt(B.targeting.slice(5), w); return; }
   if (B.targeting) { fireTargeted(B.targeting, w); return; }
   if (B.deployPick) { deployAt(B.deployPick, w); return; }
@@ -986,6 +1001,7 @@ function battleTap(w) {
 
 function drawBattleGround(ctx) {
   if (!B) return;
+  drawStormGround(ctx);
   drawSmokes(ctx);
   drawCorpses(ctx);
   for (const u of B.units) if (!u.air) drawEnemy(ctx, u);
@@ -1089,6 +1105,7 @@ function drawBattleAir(ctx) {
     }
   }
   for (const pl of B.planes) drawJet(ctx, pl.x, pl.y, pl.a);
+  drawStormAir(ctx);
   // building health bars
   for (const b of S.buildings) {
     if (b._dead || isPassive(b.type) || b._hp >= b._maxhp || b.type === 'wall' && b._hp > b._maxhp * 0.98) continue;
@@ -1173,6 +1190,7 @@ function drawInfantry(ctx, u, e, white) {
   if (u.flash > 0 && look.gun && !look.tanks) {
     ctx.fillStyle = '#ffd36b'; ctx.beginPath(); ctx.arc(r * 0.2 + look.gun + 2, 1.5, look.armor ? 3.5 : 2.5, 0, Math.PI * 2); ctx.fill();
   }
+  if (STORM_INF[u.type]) STORM_INF[u.type](ctx, u, e, white);
 }
 
 function wheel(ctx, x, y, w, h) { ctx.fillStyle = '#16120f'; rr(ctx, x - w / 2, y - h / 2, w, h, Math.min(w, h) / 2); ctx.fill(); }
@@ -1187,6 +1205,7 @@ function hullBox(ctx, L, W, color, white) {
 
 function drawVehicle(ctx, u, e, white) {
   const t = u.type;
+  if (STORM_ART[t]) { STORM_ART[t](ctx, u, e, white); return; }
   if (t === 'behemoth') { drawBehemoth(ctx, u, e, white); return; }
   ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.beginPath(); ctx.ellipse(4, 5, e.r + 3, e.r * 0.75, u.angle, 0, Math.PI * 2); ctx.fill();
   ctx.save(); ctx.rotate(u.angle);
@@ -1287,6 +1306,7 @@ function drawVehicle(ctx, u, e, white) {
 
 function drawAirUnit(ctx, u, e, white) {
   if (u.type === 'skyfortress') { drawSkyFortress(ctx, u, e, white); return; }
+  if (STORM_ART[u.type]) { STORM_ART[u.type](ctx, u, e, white); return; }
   const heli = u.type === 'heli';
   const alt = heli ? 30 : 18;
   ctx.fillStyle = 'rgba(0,0,0,0.22)'; ctx.beginPath(); ctx.ellipse(alt * 0.35, alt * 0.45, heli ? 20 : 10, heli ? 9 : 5, u.angle, 0, Math.PI * 2); ctx.fill();
@@ -1340,6 +1360,7 @@ function renderEnemyPreview(type, px) {
 }
 
 function drawEnemyBar(ctx, u, e) {
+  stormEnemyOverlay(ctx, u, e);
   if (u.elite) {
     ctx.strokeStyle = `rgba(242,182,50,${0.6 + Math.sin(tSec * 6) * 0.3})`; ctx.lineWidth = 2;
     ctx.beginPath(); ctx.ellipse(u.x, u.y + 2, e.r + 5, (e.r + 5) * 0.6, 0, 0, Math.PI * 2); ctx.stroke();
@@ -1352,7 +1373,8 @@ function drawEnemyBar(ctx, u, e) {
     ctx.strokeStyle = `rgba(140,230,120,${u.healFx * 2})`; ctx.lineWidth = 2;
     ctx.beginPath(); ctx.arc(u.x, u.y, e.r + 4, 0, Math.PI * 2); ctx.stroke();
   }
-  if (u.hp < u.max || e.boss) {
+  const hb = S.settings.hpbars || 'damaged';
+  if (e.boss || (hb === 'always') || (hb === 'damaged' && u.hp < u.max)) {
     const w = e.raidBoss ? 100 : e.boss ? 60 : e.vehicle ? 26 : e.air ? 20 : 14, y = u.y - (u.air ? 34 : e.r + 10);
     const h = e.boss ? 5 : 2;
     ctx.fillStyle = 'rgba(16,18,12,0.8)'; ctx.fillRect(u.x - w / 2 - 1, y - 1, w + 2, h + 2);
@@ -1445,7 +1467,7 @@ function nextWaveComp() {
 function earlyBonus() { return Math.round(Math.ceil(B.breakT) * (8 + B.wave * 4)); }
 function updateNextWave() {
   const el = $('#next-wave');
-  const show = B.phase === 'break' && !B.over && B.breakT > 0.5;
+  const show = B.phase === 'break' && !B.over && B.breakT > 0.5 && S.settings.nextwave !== false;
   if (el.hidden === show) el.hidden = !show;
   if (!show) { nextWaveKey = ''; return; }
   const comp = nextWaveComp();
@@ -1491,7 +1513,7 @@ function initBattleUI() {
 /* ----- Screen shake ----- */
 let shakeAmt = 0;
 const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-function addShake(a) { if (!reduceMotion && !S.settings.lowfx) shakeAmt = Math.min(10, shakeAmt + a); }
+function addShake(a) { if (!reduceMotion && !S.settings.lowfx && S.settings.shake !== false && !S.settings.reducemotion) shakeAmt = Math.min(10, shakeAmt + a); }
 function shakeOffset(dt) {
   if (shakeAmt <= 0.05) { shakeAmt = 0; return { x: 0, y: 0 }; }
   shakeAmt *= Math.pow(0.02, dt);

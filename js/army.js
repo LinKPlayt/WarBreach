@@ -306,7 +306,7 @@ function updateTroops(dt) {
 function moveTroopToward(t, p, dt, d) {
   const dx = p.x - t.x, dy = p.y - t.y, dist = Math.hypot(dx, dy);
   if (dist < 4) { t.moving = false; return; }
-  const step = Math.min(dist, d.speed * TILE * dt);
+  const step = Math.min(dist, d.speed * (B && B.troopSpeed ? B.troopSpeed : 1) * TILE * dt);
   t.x += dx / dist * step; t.y += dy / dist * step;
   t.angle = Math.atan2(dy, dx);
   if (!t.tgt) t.aim = t.angle;
