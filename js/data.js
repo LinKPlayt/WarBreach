@@ -1061,7 +1061,7 @@ const PHOTO_FILTERS = [
 
 // Update 3.0 support buildings a Command Center level unlocks (for the roadmap and level-up notes).
 function supportUnlockedAt(L) {
-  return ['repairbay', 'shieldgen', 'silo', 'sentry', 'hangar', 'vault', 'tradepost'].filter(t => LIMITS[t][L] > 0 && LIMITS[t][L - 1] === 0);
+  return ['repairbay', 'shieldgen', 'silo', 'sentry', 'hangar', 'vault', 'tradepost', 'vengeance'].filter(t => LIMITS[t][L] > 0 && LIMITS[t][L - 1] === 0);
 }
 
 /* =================== Update 3.5: stability and fixes =================== */
@@ -1222,3 +1222,81 @@ ACHIEVEMENTS.push(
   { id: 'league', name: 'League Climber', stat: s => s.leagueBest || 0, tiers: [2, 4, 5], medals: [5, 15, 40], unit: 'best league reached' },
   { id: 'storms', name: 'Storm Chaser', stat: s => s.stats.storms || 0, tiers: [3, 15, 50], medals: [5, 12, 30], unit: 'battles in storms, sand or blizzards' },
 );
+
+/* =================== Update 5.0: Legends =================== */
+const UPDATE5_VERSION = '5.0';
+
+Object.assign(DEFS, {
+  vengeance: {
+    name: 'Vengeance Tower', code: 'VG', cat: 'defense', size: 2, max: MAX_LEVEL,
+    desc: 'A crimson beam cannon that grows stronger with every building the enemy destroys: +12% damage per fallen building, up to triple damage.',
+    cost: { base: { gold: 30000, steel: 30000 }, growth: 1.35 },
+    time: { base: 300, growth: 1.5 },
+    hp: { base: 2600, growth: 1.25 },
+    dmg: { base: 260, growth: 1.22 }, fireRate: 0.7, range: 6, splash: 0.6, targets: 'both', vengeance: 0.12, vengeanceMax: 2,
+  },
+  // a temporary inflatable decoy placed by the Decoy Beacon ability; never saved
+  decoy: { name: 'Decoy Tank', code: 'DK', cat: 'hidden', size: 1, max: 1, decoy: true, desc: 'Inflatable decoy.', cost: { base: { gold: 0 }, growth: 1 }, time: { base: 0, growth: 1 }, hp: { base: 1, growth: 1 } },
+});
+Object.assign(LIMITS, {
+  vengeance: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2],
+  decoy:     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+});
+ABILITIES.decoy = { name: 'Decoy Beacon', short: 'Decoy', cooldown: 40, hq: 7, target: true, desc: 'Drops an inflatable decoy tank. Enemies nearby attack it instead of your base for 12 seconds.' };
+const DECOY = { life: 12, pull: 4.5, hp: 1500, hpPerWave: 120 };
+PRIORITIES.push({ id: 'air', name: 'Air first' });
+
+// Paragons: merge three defenses of a type into one super tower
+const PARAGON = { hq: 10, level: 10, copies: 3, medals: 30, costMul: 1.5, dmg: 4, rate: 1.3, range: 1.2, hp: 3 };
+const NO_PARAGON = ['hq', 'watchtower', 'sentry', 'hangar', 'vengeance'];
+function paragonCost(type) { const c = costFor(type, PARAGON.level); return { gold: Math.round(c.gold * PARAGON.costMul), steel: Math.round(c.steel * PARAGON.costMul), oil: Math.round((c.oil || 0) * PARAGON.costMul), medals: PARAGON.medals }; }
+
+// Commander Knowledge
+const KNOWLEDGE = [
+  { id: 'prod', name: 'Supply Chains', desc: '+6% mine, foundry and derrick production', max: 3, per: 0.06 },
+  { id: 'loot', name: 'War Profits', desc: '+6% battle loot', max: 3, per: 0.06 },
+  { id: 'build', name: 'Fast Builders', desc: '5% faster construction', max: 3, per: 0.05 },
+  { id: 'train', name: 'Drill Masters', desc: '10% faster troop training', max: 3, per: 0.10 },
+  { id: 'morale', name: 'Battle Hymns', desc: 'Start battles with +15% morale', max: 3, per: 15 },
+  { id: 'crates', name: 'Air Drops', desc: 'Supply drops in battle 15% more often', max: 3, per: 0.15 },
+  { id: 'guns', name: 'Weapons Doctrine', desc: '+3% damage for every defense', max: 3, per: 0.03 },
+  { id: 'armor', name: 'Fortification', desc: '+5% health for every building in battle', max: 3, per: 0.05 },
+  { id: 'hero', name: 'Mentorship', desc: '+15% hero experience', max: 3, per: 0.15 },
+  { id: 'tactics', name: 'War Planner', desc: 'One more War Games slot', max: 1, per: 1 },
+];
+
+// Gauntlet: the roguelite mode
+const GAUNTLET = { stages: 8, hq: 5, waveScale: 0.4, startCoins: 3, campHeal: 0.35 };
+const GAUNTLET_NODES = {
+  battle: { name: 'Skirmish', desc: 'A standard fight. +3 coins', weight: 5 },
+  elite: { name: 'Elite assault', desc: 'Tougher enemies and a Siege Tank. +5 coins, better artifacts', weight: 2 },
+  camp: { name: 'Field camp', desc: 'Repair the Command Center by 35%', weight: 1.5 },
+  merchant: { name: 'Black market', desc: 'Spend coins on artifacts', weight: 1.5 },
+  boss: { name: 'Warlord', desc: 'The final battle', weight: 0 },
+};
+const ART_RARITY = { common: { weight: 6, price: 3, color: '#a6a58a' }, rare: { weight: 3, price: 5, color: '#6ec0ff' }, epic: { weight: 1, price: 8, color: '#f2b632' } };
+const ARTIFACTS = [
+  { id: 'barrels', name: 'Hot Barrels', rarity: 'common', desc: '+20% damage for every defense', fx: { dmg: 0.2 } },
+  { id: 'belts', name: 'Belt Feed', rarity: 'common', desc: '+15% fire rate', fx: { rate: 0.15 } },
+  { id: 'spotters', name: 'Spotter Network', rarity: 'common', desc: '+15% range', fx: { range: 0.15 } },
+  { id: 'squads', name: 'Veteran Squads', rarity: 'common', desc: '+40% troop damage and health', fx: { troops: 0.4 } },
+  { id: 'medal', name: 'Hero\'s Medal', rarity: 'common', desc: '+50% hero damage', fx: { hero: 0.5 } },
+  { id: 'bunker', name: 'Reinforced Bunker', rarity: 'common', desc: 'Command Center +50% health', fx: { hqHp: 0.5 } },
+  { id: 'hands', name: 'Quick Hands', rarity: 'rare', desc: 'Abilities recharge 30% faster', fx: { cd: 0.3 } },
+  { id: 'flak', name: 'Flak Doctrine', rarity: 'rare', desc: '+60% damage against aircraft', fx: { antiAir: 0.6 } },
+  { id: 'ordnance', name: 'Heavy Ordnance', rarity: 'rare', desc: '+30% splash damage', fx: { splash: 0.3 } },
+  { id: 'drums', name: 'Rally Drums', rarity: 'rare', desc: 'Start every battle with 60% morale', fx: { morale: 60 } },
+  { id: 'scrap', name: 'Scrap Armor', rarity: 'rare', desc: 'Walls and gates +80% health', fx: { wallHp: 0.8 } },
+  { id: 'medics', name: 'Field Hospital', rarity: 'rare', desc: 'Repair the Command Center 20% after each win', fx: { heal: 0.2 } },
+  { id: 'profiteer', name: 'War Profiteer', rarity: 'epic', desc: '+80% loot, but enemies have 15% more health', fx: { loot: 0.8, enemyHp: 0.15 } },
+  { id: 'glass', name: 'Glass Cannon', rarity: 'epic', desc: '+45% damage, but the Command Center has 30% less health', fx: { dmg: 0.45, hqHp: -0.3 } },
+  { id: 'blitz', name: 'Blitz Tactics', rarity: 'epic', desc: '+30% fire rate, but enemies move 15% faster', fx: { rate: 0.3, enemySpeed: 0.15 } },
+  { id: 'arsenal', name: 'Total Arsenal', rarity: 'epic', desc: '+15% damage, fire rate and range', fx: { dmg: 0.15, rate: 0.15, range: 0.15 } },
+];
+
+// Field Album
+const ALBUM = { killsPerCard: 25, defenseLevel: 5, heroLevel: 5, rewards: { enemies: 30, arsenal: 20, commanders: 15, battlefields: 10, bosses: 20 } };
+// Win streaks and the weekend event
+const STREAK = { winWaves: 8, perWin: 0.1, max: 0.5 };
+const WEEKEND = { loot: 0.25, medalMul: 2 };
+const WELCOME_MIN = 20 * 60 * 1000;

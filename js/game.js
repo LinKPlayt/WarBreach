@@ -12,6 +12,7 @@ let placing = null;              // { type, x, y, moveId, valid }
 let particles = [];
 let floaters = [];
 let sellArmed = false;
+let paragonArmed = false; // Paragon merges take two taps, like selling
 
 function newBase() {
   const s = { v: 1, name: 'Outpost Bravo', gold: 750, steel: 600, nextId: 1, buildings: [], bestWave: 0, saved: Date.now() };
@@ -84,6 +85,14 @@ function migrate(s) {
   if (!Number.isInteger(s.checkpoint)) s.checkpoint = 0;
   if (!Number.isInteger(s.leagueBest)) s.leagueBest = 0;
   for (const g of (s.gear || [])) if (g.lvl != null && !(g.lvl >= 1 && g.lvl <= GEAR_MAX_LEVEL)) g.lvl = 1;
+  // Update 5.0
+  s.buildings = s.buildings.filter(b => !DEFS[b.type].decoy); // battle-only decoys never stay in a base
+  if (!s.knowledge || typeof s.knowledge !== 'object') s.knowledge = {};
+  for (const k of Object.keys(s.knowledge)) { const d = KNOWLEDGE.find(x => x.id === k); if (!d || !Number.isInteger(s.knowledge[k]) || s.knowledge[k] < 0) delete s.knowledge[k]; else s.knowledge[k] = Math.min(d.max, s.knowledge[k]); }
+  if (!Array.isArray(s.armyPresets)) s.armyPresets = [];
+  if (!Array.isArray(s.challenges)) s.challenges = [];
+  if (s.gauntlet && s.gauntlet.active && !(Number.isInteger(s.gauntlet.stage) && Array.isArray(s.gauntlet.arts))) s.gauntlet = { active: false };
+  if (!s.winStreak) s.winStreak = { n: 0, best: 0 };
   return s;
 }
 
@@ -222,7 +231,7 @@ function upgradeStatus(b) {
 }
 
 function startJob(b, to) {
-  const time = Math.round(timeFor(b.type, to) * (1 - researchBonus('engineering')) * (boostActive('build') ? 0.5 : 1));
+  const time = Math.round(timeFor(b.type, to) * (1 - researchBonus('engineering') - kBonus('build')) * (boostActive('build') ? 0.5 : 1));
   if (time <= 0) { b.level = to; return; }
   const now = Date.now();
   b.job = { to, start: now, end: now + time * 1000 };
@@ -691,7 +700,7 @@ function update(dt) {
     const d = DEFS[b.type];
     if (d.produces && b.level >= 1) {
       const st = statsFor(b.type, b.level);
-      b.stored = Math.min(st.hold, b.stored + (st.rate * (1 + researchBonus('logistics')) * (boostActive('prod') ? 2 : 1) / 60) * dt);
+      b.stored = Math.min(st.hold, b.stored + (st.rate * (1 + researchBonus('logistics') + kBonus('prod')) * (boostActive('prod') ? 2 : 1) / 60) * dt);
     }
     if (d.cat === 'defense' && !B) b.angle = b.baseAngle + Math.sin(tSec * 0.45 + b.id * 1.7) * 1.1;
     if (b.type === 'steelworks' && b.level >= 1 && b._chimney && Math.random() < dt * 4) {
@@ -831,6 +840,7 @@ function draw() {
   // unlit overlays stay readable at night
   ctx.setTransform(dpr * z, 0, 0, dpr * z, dpr * (vw / 2 - cam.x * z + sh.x), dpr * (vh / 2 - cam.y * z + sh.y));
   drawQueueBadges(ctx);
+  drawParagons(ctx);
   if (!placing && !B && !PHOTO.on) for (const b of S.buildings) {
     if (!hasBubble(b)) continue;
     const p = bubblePos(b);
@@ -1037,7 +1047,7 @@ let panelKey = '';
 
 function select(id) {
   selectedId = id;
-  sellArmed = false;
+  sellArmed = false; paragonArmed = false;
   panelKey = '';
   if (!id) hidePanel(); else refreshPanel(true);
 }
@@ -1088,7 +1098,7 @@ function refreshPanel(force) {
   const b = byId(selectedId);
   if (!b) { hidePanel(); return; }
   const up = upgradeStatus(b);
-  const key = [b.id, b.level, !!b.job, up.ok, up.reason, sellArmed, Math.floor(b.stored) >= 1, b.x, b.y].join('|');
+  const key = [b.id, b.level, !!b.job, up.ok, up.reason, sellArmed, paragonArmed, !!b.paragon, Math.floor(b.stored) >= 1, b.x, b.y].join('|');
   if (force || key !== panelKey) {
     panelKey = key;
     panel.innerHTML = buildPanel(b, up);
@@ -1147,6 +1157,13 @@ function buildPanel(b, up) {
     actions += `<button class="btn ghost" data-act="move">Move</button>`;
     if (b.type === 'hq') actions += `<button class="btn ghost" data-act="roadmap">Roadmap</button>`;
     if (b.type === 'workshop' && b.level >= 1) actions += `<button class="btn" data-act="workshop"><span class="btn-main">Craft</span><span class="btn-sub">${(S.craft || []).length ? `${S.craft.length} in production` : 'Ready'}</span></button>`;
+    const ps = paragonStatus(b);
+    if (!ps.hidden && b.level >= 1) {
+      const pCost = ps.cost ? `<span class="cost ${S.medals < ps.cost.medals ? 'short' : ''}">${ICON.medal}${ps.cost.medals}</span>${costHTML(ps.cost)}` : '';
+      actions += ps.ok && paragonArmed
+        ? `<button class="btn danger" data-act="paragon-confirm"><span class="btn-main">Merge 3</span><span class="btn-sub">Uses ${PARAGON.copies - 1} other ${DEFS[b.type].name}s</span></button>`
+        : `<button class="btn ${ps.ok ? 'medal-btn' : 'off'}" data-act="paragon"><span class="btn-main">Paragon</span><span class="btn-sub">${pCost || ps.reason}</span></button>`;
+    }
     if (b.type === 'tradepost' && b.level >= 1) actions += `<button class="btn" data-act="trade"><span class="btn-main">Trade</span><span class="btn-sub">${fmt(tradeAllowance())} left today</span></button>`;
     if (b.type === 'barracks' && b.level >= 1) actions += `<button class="btn" data-act="barracks"><span class="btn-main">Train</span><span class="btn-sub">Army ${armySpace()}/${armyCapacity()}</span></button>`;
     if (b.type === 'lab' && b.level >= 1) actions += `<button class="btn medal-btn" data-act="research"><span class="btn-main">Research</span><span class="btn-sub">${S.research.job ? fmtTime((S.research.job.end - Date.now()) / 1000) : 'Ready'}</span></button>`;
@@ -1161,7 +1178,7 @@ function buildPanel(b, up) {
       <div class="p-head">
         <span class="p-code">${d.code}</span>
         <span class="p-title">${title}</span>
-        <span class="p-lvl">${L === 0 ? 'NEW' : 'LVL ' + L}</span>
+        <span class="p-lvl">${L === 0 ? 'NEW' : 'LVL ' + L}</span>${b.paragon ? '<span class="p-paragon">Paragon</span>' : ''}
       </div>
       <div class="p-stats">${statChips(b)}</div>
       <div class="p-grid">${gridRef(b)}</div>
@@ -1177,6 +1194,7 @@ panel.addEventListener('click', e => {
   if (!b) return;
   const act = btn.dataset.act;
   if (act !== 'sell' && act !== 'sell-confirm') sellArmed = false;
+  if (act !== 'paragon' && act !== 'paragon-confirm') paragonArmed = false;
   if (act === 'upgrade') upgrade(b);
   else if (act === 'collect') collect(b);
   else if (act === 'move') startMove(b);
@@ -1187,6 +1205,8 @@ panel.addEventListener('click', e => {
   else if (act === 'barracks') { openBarracks(); return; }
   else if (act === 'workshop') { openWorkshop(); return; }
   else if (act === 'trade') { openTrading(); return; }
+  else if (act === 'paragon') { const ps = paragonStatus(b); if (ps.ok) paragonArmed = true; else { if (ps.reason) toast(ps.reason, 'bad'); Sound.play('error'); } }
+  else if (act === 'paragon-confirm') { paragonArmed = false; if (makeParagon(b)) select(b.id); }
   else if (act === 'spec') { openSpec(b); return; }
   else if (act === 'priority') {
     const i = PRIORITIES.findIndex(p => p.id === (b.priority || 'close'));
@@ -1753,7 +1773,7 @@ function applyOffline(elapsedSec) {
     const d = DEFS[b.type];
     if (d.produces && b.level >= 1) {
       const st = statsFor(b.type, b.level);
-      b.stored = Math.min(st.hold, b.stored + (st.rate * (1 + researchBonus('logistics')) / 60) * elapsedSec);
+      b.stored = Math.min(st.hold, b.stored + (st.rate * (1 + researchBonus('logistics') + kBonus('prod')) / 60) * elapsedSec);
     }
   }
 }
@@ -1763,6 +1783,7 @@ function start(hotData) {
   if (!saved) { try { saved = load(localStorage.getItem(SAVE_KEY)); } catch (e) { saved = null; } }
   S = saved || newBase();
   initWarlords();
+  initLegends();
   if (saved) { const away = Date.now() - (S.saved || Date.now()); applyOffline(away / 1000); checkSurpriseAttack(away); }
   rebuildGrid();
   applySettings();
@@ -1779,7 +1800,7 @@ function start(hotData) {
   $('#btn-gift').addEventListener('click', () => { if (!B) { Sound.play('click'); openLogin(); } });
   $('#btn-chest').addEventListener('click', () => { if (!B) { Sound.play('click'); openChest(); } });
   $('#medals').addEventListener('click', () => { if (!B) { Sound.play('click'); openQuartermaster(); } });
-  setTimeout(() => { if (!B && modal.hidden && !showSurpriseReport() && !maybeShowWhatsNew4() && !maybeShowWhatsNew3() && !maybeShowWhatsNew2()) maybeShowWhatsNew(); }, 700);
+  setTimeout(() => { if (!B && modal.hidden && !showSurpriseReport() && !maybeShowWhatsNew5() && !showWelcomeBack() && !maybeShowWhatsNew4() && !maybeShowWhatsNew3() && !maybeShowWhatsNew2()) maybeShowWhatsNew(); }, 700);
   $('#btn-hub').addEventListener('click', () => { Sound.play('click'); openHub(); });
   $('#edit-done').addEventListener('click', () => setEditMode(false));
   Music.start();

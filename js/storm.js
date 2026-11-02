@@ -8,7 +8,7 @@ const BULLET_SRC = new Set(['mg', 'hq', 'watchtower', 'sniper', 'troops', 'hero'
 /* ================= Doctrines and War Games ================= */
 function doctrineUnlocked() { return hqLevel() >= DOCTRINE_HQ; }
 function doctrine() { return (doctrineUnlocked() && DOCTRINES.find(d => d.id === S.doctrine)) || DOCTRINES[0]; }
-function activeWargames() { return (S.wargames || []).filter(id => WARGAMES.some(w => w.id === id)).slice(0, WARGAMES_MAX); }
+function activeWargames() { return (S.wargames || []).filter(id => WARGAMES.some(w => w.id === id)).slice(0, wargamesMax()); }
 function wargamesLoot() { return activeWargames().reduce((a, id) => a + WARGAMES.find(w => w.id === id).loot, 0); }
 
 /* ================= Battle lifecycle hooks ================= */
@@ -173,6 +173,7 @@ function stormEnemyKilled(u, e) {
   }
   if (u.type === 'titan') S.stats.titans = (S.stats.titans || 0) + 1;
   warEnemyKilled(u, e);
+  legendsEnemyKilled(u, e);
 }
 
 /* ================= Shield Generator ================= */
@@ -381,7 +382,7 @@ function stormBattleUpdate(dt) {
   // supply drops
   if (!B.practice && !B.raid && B.phase === 'fight') {
     B.crateT -= dt;
-    if (B.crateT <= 0) { B.crateT = 45 + Math.random() * 20; spawnBattleCrate(); }
+    if (B.crateT <= 0) { B.crateT = (45 + Math.random() * 20) * (1 - kBonus('crates')); spawnBattleCrate(); }
   }
   for (const c of B.crates) { if (c.h > 0) c.h = Math.max(0, c.h - 70 * dt); else c.life -= dt; }
   B.crates = B.crates.filter(c => c.life > 0);
@@ -868,7 +869,7 @@ function openDoctrines(back) {
 function briefExtrasHTML() {
   const wg = activeWargames(), bonus = Math.round(wargamesLoot() * 100);
   return `
-    <h3 class="report-h">War Games <small>${wg.length}/${WARGAMES_MAX} · ${bonus ? `+${bonus}% loot` : 'optional, extra loot'}</small></h3>
+    <h3 class="report-h">War Games <small>${wg.length}/${wargamesMax()} · ${bonus ? `+${bonus}% loot` : 'optional, extra loot'}</small></h3>
     <div class="wg-row">${WARGAMES.map(w => `<button class="wg ${wg.includes(w.id) ? 'on' : ''}" data-wg="${w.id}"><b>${w.name}</b><span>${w.desc}</span><i>+${Math.round(w.loot * 100)}%</i></button>`).join('')}</div>
     ${warBriefHTML()}
     <div class="doc-line">${doctrineUnlocked() ? `Doctrine: <b>${doctrine().name}</b> · ${doctrine().desc} <button class="btn ghost small" id="btn-doctrine">Change</button>` : `Doctrines unlock at Command Center ${DOCTRINE_HQ}`}</div>`;
@@ -879,7 +880,7 @@ function wireBriefExtras(reopen) {
     const id = el.dataset.wg;
     S.wargames = activeWargames();
     if (S.wargames.includes(id)) S.wargames = S.wargames.filter(x => x !== id);
-    else if (S.wargames.length >= WARGAMES_MAX) { toast(`Pick up to ${WARGAMES_MAX} War Games`, 'bad'); Sound.play('error'); return; }
+    else if (S.wargames.length >= wargamesMax()) { toast(`Pick up to ${wargamesMax()} War Games`, 'bad'); Sound.play('error'); return; }
     else S.wargames.push(id);
     save(); Sound.play('click'); reopen();
   }));

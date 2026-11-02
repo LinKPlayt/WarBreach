@@ -74,7 +74,7 @@ function warWeaponMod(b, w) {
   }
   const m = masteryTier((S.mastery || {})[b.type]);
   if (m) w.dmg *= 1 + MASTERY.bonus[m - 1];
-  return w;
+  return legendWeaponMod(b, w);
 }
 
 function warDamageMod(u, ed, dmg, src) {
@@ -192,6 +192,7 @@ function updateHangars(dt) {
 function warEnemyUpdate(u, e, dt) {
   if (e.bomber) { updateBomber(u, e, dt); return true; }
   if (e.shieldAura) { updateShieldDrone(u, e, dt); return true; }
+  if (decoyPull(u, e, dt)) return true;
   // Shield Troopers pull nearby ground enemies onto themselves (only with a clear line to them)
   if (!u.air && !e.sapper && !e.heal && !e.boss && B.troops.length) {
     const tr = tauntAt(u);
@@ -207,11 +208,13 @@ function warEnemyUpdate(u, e, dt) {
   }
   return false;
 }
-function clearLine(x1, y1, x2, y2) {
+// True when no live building stands between two points (`ignore` is the building being aimed at, if any).
+function clearLine(x1, y1, x2, y2, ignore) {
   const n = Math.ceil(Math.hypot(x2 - x1, y2 - y1) / (TILE / 2));
   for (let i = 1; i < n; i++) {
     const x = x1 + (x2 - x1) * i / n, y = y1 + (y2 - y1) * i / n;
-    if (liveBuildingAtTile(Math.floor(x / TILE), Math.floor(y / TILE))) return false;
+    const hit = liveBuildingAtTile(Math.floor(x / TILE), Math.floor(y / TILE));
+    if (hit && hit !== ignore) return false;
   }
   return true;
 }
@@ -575,7 +578,7 @@ function basePower() {
     const d = DEFS[b.type];
     if (d.deco) continue;
     const st = statsFor(b.type, b.level);
-    if (d.dmg && !d.trap) p += st.dps;
+    if (d.dmg && !d.trap) p += st.dps * (b.paragon ? PARAGON.dmg * PARAGON.rate : 1);
     p += st.hp / 40;
   }
   p += Object.keys(RESEARCH).reduce((a, k) => a + researchLevel(k), 0) * 60;
@@ -804,6 +807,7 @@ function warBriefHTML() {
     <h3 class="report-h">Battle forecast</h3>
     <div class="fc-row"><span class="fc"><b>${f.weather.name}</b> ${weatherEffect(f.weather)}</span><span class="fc"><b>${f.daytime.name}</b> loot x${f.daytime.loot}</span>
       <button class="btn ghost small" id="btn-reroll">Reroll · ${FORECAST_REROLL} medals</button></div>
+    ${legendsBriefHTML()}
     ${cps.length > 1 ? `<h3 class="report-h">Start at</h3><div class="seg cp-row">${cps.map(c => `<button class="seg-b ${c === cur ? 'on' : ''}" data-cp="${c}">Wave ${c + 1}</button>`).join('')}</div>` : ''}`;
 }
 function warWireBrief(reopen) {

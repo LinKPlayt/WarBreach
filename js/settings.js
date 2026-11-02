@@ -66,7 +66,7 @@ function openSettings(back, tab) {
     <div class="settings set-wrap">
       <div class="m-head set-head"><h2>Settings</h2><div class="tabs set-tabs">${SET_TABS.map(([id, name]) => `<button class="tab ${id === setTab ? 'on' : ''}" data-st="${id}">${name}</button>`).join('')}</div></div>
       <div class="set-body" id="set-body"></div>
-      <div class="settings-row set-foot"><span class="set-ver">WarBreach ${UPDATE4_VERSION} · Warlords</span><button class="btn" data-close>Done</button></div>
+      <div class="settings-row set-foot"><span class="set-ver">WarBreach ${UPDATE5_VERSION} · Legends</span><button class="btn" data-close>Done</button></div>
     </div>`, back || null);
   const body = $('#modal-body');
   body.querySelectorAll('[data-st]').forEach(t => t.addEventListener('click', () => {
@@ -126,7 +126,7 @@ function renderDataTab(el, back) {
     if (k === 'backup') { openBackup(); modalOnClose = () => openSettings(back, 'data'); }
     else if (k === 'save') { save(); toast('Game saved', 'good'); renderDataTab(el, back); }
     else if (k === 'tut') { if (B) { toast('Finish the battle first', 'bad'); return; } S.tut = 0; save(); toast('Tutorial hints are back', 'info'); }
-    else if (k === 'news') { openWhatsNew4(() => openSettings(back, 'data')); }
+    else if (k === 'news') { openWhatsNew5(() => openSettings(back, 'data')); }
     else if (k === 'reset') {
       if (B) { toast('Finish the battle first', 'bad'); return; }
       if (b.dataset.armed) {
@@ -147,6 +147,10 @@ function openMenu() {
     { id: 'hof', name: 'Hall of Fame', sub: (S.hof || []).length ? `Best run: wave ${S.hof[0].wave}` : 'Your best runs', fn: () => openHallOfFame(openMenu) },
     { id: 'photo', name: 'Photo mode', sub: 'Filters, time and weather', fn: startPhotoMode },
     { id: 'coverage', name: 'Coverage view', sub: 'Where your guns reach', fn: startCoverage },
+    { id: 'gauntlet', name: 'The Gauntlet', sub: S.gauntlet && S.gauntlet.active ? `Run in progress · stage ${S.gauntlet.stage + 1}` : `Best: ${S.gauntletBest || 0}/${GAUNTLET.stages}`, fn: () => openGauntlet(openMenu) },
+    { id: 'challenges', name: 'Challenge Editor', sub: `${(S.challenges || []).length} saved`, fn: () => openChallenges(openMenu) },
+    { id: 'knowledge', name: 'Knowledge', sub: `${knowledgeFree()} point${knowledgeFree() === 1 ? '' : 's'} free`, dot: knowledgeFree() > 0, fn: () => openKnowledge(openMenu) },
+    { id: 'album', name: 'Field Album', sub: albumClaimable() ? `${albumClaimable()} page reward${albumClaimable() > 1 ? 's' : ''} ready` : 'Collect them all', dot: albumClaimable() > 0, fn: () => openAlbum(openMenu) },
     { id: 'power', name: 'Base power', sub: `${fmt(basePower())} · ${LEAGUES[leagueOf(basePower())].name} League`, fn: () => openLeagues(openMenu) },
     { id: 'mastery', name: 'Mastery', sub: 'Defense kill bonuses', fn: () => openMastery(openMenu) },
     { id: 'intel', name: 'Intel feed', sub: S.logUnread ? `${S.logUnread} new` : 'Base activity', dot: !!S.logUnread, fn: () => openIntel(openMenu) },
@@ -155,7 +159,7 @@ function openMenu() {
     { id: 'ach', name: 'Achievements', sub: `${achClaimable()} to claim`, dot: achClaimable() > 0, fn: () => { openAchievements(); modalOnClose = openMenu; } },
     { id: 'wardrobe', name: 'Wardrobe', sub: 'Skins, flags and camo', fn: openWardrobe },
     { id: 'layouts', name: 'Layouts', sub: 'Save and edit your base', fn: openLayouts },
-    { id: 'news', name: "What's new", sub: `Update ${UPDATE4_VERSION}`, fn: () => openWhatsNew4(openMenu) },
+    { id: 'news', name: "What's new", sub: `Update ${UPDATE5_VERSION}`, fn: () => openWhatsNew5(openMenu) },
     { id: 'fs', name: 'Fullscreen', sub: 'Hide the browser bars', fn: () => { closeModal(); toggleFullscreen(); } },
   ];
   openModal(`

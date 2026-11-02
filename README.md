@@ -166,6 +166,18 @@ Found with automated stress tests: battle soak runs at every Command Center leve
 
 Every 4.0 feature has a logic test (74 checks), and the battle soak, UI fuzzing, save, time-warp and earlier update suites all pass.
 
+## Update 5.0: Legends
+
+Planned from research into what the genre's leaders shipped in 2025 and what their players asked for. The plan, with sources, is in [docs/update-5.0-plan.md](docs/update-5.0-plan.md).
+
+**New modes:** The Gauntlet, a roguelite run of 8 stages (Command Center 5): pick one of two paths each stage (skirmish, elite assault, field camp or black market), collect artifacts from 16 (some with trade-offs) and beat a Warlord boss. Command Center damage carries over between battles; a defeat ends the run. · Challenge Editor: build a battle from any enemies, wave count, strength, rules (fast, armored, no airstrikes, no repair, no hero, glass walls, blackout), weather and time of day, save up to 10 and share them as codes.
+**Late game:** Paragons merge three level 10+ defenses of one type into one super tower (4x damage, +30% fire rate, +20% range, triple health, one per type, Command Center 10; two taps to confirm) · Commander Knowledge, 10 permanent perks with points from Command Center levels, rank and Gauntlet wins, free respec.
+**Battle:** Vengeance Tower, a crimson beam cannon that gains 12% damage for every building the enemy destroys, up to triple (Command Center 11) · Decoy Beacon ability, an inflatable tank that pulls nearby enemies onto itself for 12 seconds (Command Center 7) · "Air first" targeting.
+**Army:** three army presets; one tap queues whatever is missing.
+**Coming back:** Field Album (enemy dossiers, arsenal, commanders, battlefields, bosses; each finished page pays medals once) · win streaks (+10% battle loot per win, up to +50%) · Weekend Blitz (+25% loot and double wave medals every Saturday and Sunday) · a welcome-back report after 20+ minutes away.
+
+Every 5.0 feature has a logic test (79 checks), and the 4.0 suite, battle soak, UI fuzzing, save, time-warp and earlier update suites all pass.
+
 ## Code layout
 
 - `js/data.js` – building stats, costs, limits per HQ level, wave previews
@@ -184,5 +196,6 @@ Every 4.0 feature has a logic test (74 checks), and the battle soak, UI fuzzing,
 - `js/basecamp.js` – Update 3.0 base systems: photo mode, coverage view, build queue, cargo drones, living base, new building art
 - `js/settings.js` – main menu and the tabbed Settings screen
 - `js/warlords.js` – Update 4.0: weather, morale, Sentry Gun, Drone Hangar, new enemies, Maj. Kade, Shield Trooper, checkpoints, forecast, Vault, Trading Post, mastery, leagues, gear upgrades, share codes, Intel feed, undo-sell
+- `js/legends.js` – Update 5.0: the Gauntlet, Paragons, Challenge Editor, Commander Knowledge, Vengeance Tower, Decoy Beacon, army presets, Field Album, win streaks, Weekend Blitz, welcome-back report
 - `js/game.js` – state, saving, placement, input, HUD and main loop
 - `style.css` – HUD, panels, shop and modals

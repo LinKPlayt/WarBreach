@@ -115,6 +115,7 @@ function fireTargeted(k, w) {
   else if (k === 'smoke') dropSmoke(w);
   else if (k === 'paradrop') paradrop(w);
   else if (k === 'flare') dropFlare(w);
+  else if (k === 'decoy') dropDecoy(w);
 }
 
 /* ---------------- Ability effects ---------------- */

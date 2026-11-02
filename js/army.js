@@ -61,7 +61,7 @@ function trainTroop(t) {
   const last = A.queue.length ? A.queue[A.queue.length - 1].end : now;
   const speed = boostActive('train') ? 4 : 1;
   const start = Math.max(now, last);
-  A.queue.push({ type: t, start, end: start + d.time * 1000 / speed });
+  A.queue.push({ type: t, start, end: start + d.time * 1000 / speed * (1 - kBonus('train')) });
   Sound.play('click');
   save();
   return true;

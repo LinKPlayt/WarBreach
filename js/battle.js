@@ -53,6 +53,7 @@ function startBattle(mission) {
   buildDeployBar();
   stormBattleStart();
   warBattleStart();
+  legendsBattleStart();
   S.stats.battles = (S.stats.battles || 0) + 1;
   if (S.tut != null && S.tut < 9) tutorialEvent('battle');
   S.battles = (S.battles || 0) + 1;
@@ -252,6 +253,7 @@ function battleUpdate(dt) {
   updateSmokes(dt);
   stormBattleUpdate(dt);
   warBattleUpdate(dt);
+  legendsBattleUpdate(dt);
 
   if (B.phase === 'break') {
     B.breakT -= dt;
@@ -732,6 +734,7 @@ function updateDefense(b, dt) {
       if (pr === 'strong') score = u.hp;
       else if (pr === 'weak') score = -u.hp;
       else if (pr === 'first') score = -progressLeft(u);
+      else if (pr === 'air') score = (u.air ? 1e6 : 0) - Math.hypot(u.x - c.x, u.y - c.y);
       else score = -Math.hypot(u.x - c.x, u.y - c.y);
       if (score > best) { best = score; b._tgt = u; }
     }
@@ -847,6 +850,9 @@ function updateDefense(b, dt) {
       }
       break;
     }
+    case 'vengeance':
+      fireVengeance(b, t, w, c);
+      break;
     case 'howitzer':
       Sound.play('cannon'); buzz(25);
       B.shots.push({ kind: 'mortar', x: c.x, y: c.y, sx: c.x, sy: c.y, tx: t.x, ty: t.y, t: 0, dur: 1.9, arc: 220, dmg: w.dmg, splash: w.splash, air: false, src: 'howitzer', big: true });
