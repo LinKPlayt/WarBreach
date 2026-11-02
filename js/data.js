@@ -1225,7 +1225,7 @@ ACHIEVEMENTS.push(
 
 /* =================== Update 5.0: Legends =================== */
 const UPDATE5_VERSION = '5.0';
-const PATCH5_VERSION = '5.1';
+const UPDATE55_VERSION = '5.5';
 
 Object.assign(DEFS, {
   vengeance: {

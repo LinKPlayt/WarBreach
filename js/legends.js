@@ -657,7 +657,7 @@ const WHATS_NEW_5 = [
   ['Welcome-back report', 'See what your base did while you were away'],
   ['Air first targeting', 'A new targeting priority for your anti-air'],
 ];
-const WHATS_NEW_51 = [
+const WHATS_NEW_55 = [
   ['Compact interface', 'Smaller bars and buttons on phones, clear of the notch, so you see more of the battlefield. Settings > Graphics > Interface size'],
   ['Rally button', 'No longer stays on screen after a battle ends'],
   ['Battle endings', 'A countdown from a battle you already left can no longer end your next one'],
@@ -665,10 +665,11 @@ const WHATS_NEW_51 = [
   ['Building panel', 'Costs wrap instead of being cut off, and the panel no longer covers the Campaign button'],
   ['Boss Raid', 'The time-up message names the right boss'],
 ];
+// Shows once per update: for 5.0 itself, and again for 5.5 to players who already saw 5.0.
 function maybeShowWhatsNew5() {
-  if (S.seenUpdate5 === UPDATE5_VERSION) return false;
+  if (S.seenUpdate5 === UPDATE5_VERSION && S.seenUpdate55 === UPDATE55_VERSION) return false;
   const fresh = S.tut != null && S.tut < 99;
-  Object.assign(S, { seenUpdate5: UPDATE5_VERSION, seenUpdate4: UPDATE4_VERSION, seenUpdate3: UPDATE3_VERSION, seenPatch: PATCH_VERSION, seenUpdate2: UPDATE2_VERSION, seenUpdate: UPDATE_VERSION });
+  Object.assign(S, { seenUpdate55: UPDATE55_VERSION, seenUpdate5: UPDATE5_VERSION, seenUpdate4: UPDATE4_VERSION, seenUpdate3: UPDATE3_VERSION, seenPatch: PATCH_VERSION, seenUpdate2: UPDATE2_VERSION, seenUpdate: UPDATE_VERSION });
   save();
   if (fresh) return false;
   openWhatsNew5();
@@ -677,10 +678,10 @@ function maybeShowWhatsNew5() {
 function openWhatsNew5(back) {
   openModal(`
     <div class="settings">
-      <div class="m-head"><div><span class="stamp">Update ${PATCH5_VERSION}</span><h2>Legends</h2></div></div>
+      <div class="m-head"><div><span class="stamp">Update ${UPDATE55_VERSION}</span><h2>Legends</h2></div></div>
       <p class="lead">Find the Gauntlet, Challenge Editor, Knowledge and Field Album in the Operations hub (compass) and the menu.</p>
-      <div class="chap">${PATCH5_VERSION}: phone interface and fixes</div>
-      <ul class="whats-new">${WHATS_NEW_51.map(([a, b]) => `<li><b>${a}</b><span>${b}</span></li>`).join('')}</ul>
+      <div class="chap">${UPDATE55_VERSION}: phone interface and fixes</div>
+      <ul class="whats-new">${WHATS_NEW_55.map(([a, b]) => `<li><b>${a}</b><span>${b}</span></li>`).join('')}</ul>
       <div class="chap">${UPDATE5_VERSION}: Legends</div>
       <ul class="whats-new">${WHATS_NEW_5.map(([a, b]) => `<li><b>${a}</b><span>${b}</span></li>`).join('')}</ul>
       <div class="settings-row"><button class="btn ghost" id="btn-older5">Older updates</button><button class="btn" data-close>To the front</button></div>

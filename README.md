@@ -178,7 +178,7 @@ Planned from research into what the genre's leaders shipped in 2025 and what the
 
 Every 5.0 feature has a logic test (79 checks), and the 4.0 suite, battle soak, UI fuzzing, save, time-warp and earlier update suites all pass.
 
-## Update 5.1: phone interface and fixes
+## Update 5.5: phone interface and fixes
 
 **Compact interface:** on phones (any screen whose short side is 500px or less) the top bar, corner buttons, building panel, battle columns, troop bar and dialogs are smaller and stay clear of the notch and home bar. In battle the HUD now covers 22–30% of an iPhone screen instead of 36–43%; with a building selected, 22–29% instead of 45–58%. While a building panel is open, the Build and Battle buttons step aside so the panel fits on one row. **Settings > Graphics > Interface size** switches between Auto, Compact and Standard.
 **Fixes:** the Rally button no longer stays on screen after a battle ends (it was only hidden by the battle loop, which stops before you return to base) · a delayed defeat, mission-complete or raid ending can no longer end the next battle · battle buttons no longer overlap (Speed and Launch, minimap and Rally, abilities and the troop bar) · panel costs wrap instead of being cut off, and the panel no longer covers the Campaign button · short labels for battle items · the raid time-up message names the right boss.
