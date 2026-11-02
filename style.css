@@ -1062,3 +1062,49 @@ body.contrast .btn.ghost { box-shadow: inset 0 0 0 1px #c9c6b0; color: #fff; }
   .set-slider input { width: 120px; }
   .ph-btn { min-width: 62px; padding: 5px 8px; }
 }
+
+/* ---------- Update 4.0: Warlords ---------- */
+.rally-btn {
+  position: absolute; left: max(10px, var(--safe-l)); bottom: calc(154px + var(--safe-b)); z-index: 11;
+  width: 70px; height: 60px; border-radius: 12px; overflow: hidden;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+  background: linear-gradient(#f5c542, #b9851a); color: #2a2414; font-weight: 700; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase;
+  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.45), inset 0 -3px 0 rgba(0, 0, 0, 0.2);
+}
+.rally-btn[hidden] { display: none !important; }
+.rally-btn svg { width: 20px; height: 20px; }
+.rally-btn::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(to top, transparent calc(100% - var(--p, 100%)), rgba(15, 18, 12, 0.7) 0); }
+.rally-btn .rl-cd { position: absolute; inset: 0; display: grid; place-items: center; z-index: 1; font-family: var(--font-display); font-size: 15px; color: var(--bone); text-shadow: 0 1px 0 #000; }
+.rally-btn:not(.ready):not(.active) svg, .rally-btn:not(.ready):not(.active) .rl-l { opacity: 0.35; }
+.rally-btn.ready { animation: nukeReady 0.9s ease-in-out infinite alternate; }
+.rally-btn.active { background: linear-gradient(#fff1b0, #f2b632); }
+body.lefty .rally-btn { left: auto; right: max(10px, var(--safe-r)); }
+body.photo .rally-btn, body.photo #btn-undo { display: none !important; }
+#btn-undo { position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(150px + var(--safe-b)); z-index: 13; padding: 10px 18px; font-weight: 700; color: var(--amber); border-color: var(--amber); }
+#btn-undo[hidden] { display: none !important; }
+.chap { grid-column: 1 / -1; margin: 10px 0 2px; font-family: var(--font-display); font-size: 15px; color: var(--amber); letter-spacing: 0.06em; }
+.fc-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 4px 0 10px; }
+.fc { display: inline-flex; gap: 6px; align-items: baseline; padding: 6px 10px; border-radius: 8px; background: var(--panel-2); font-size: 12px; color: var(--muted); }
+.fc b { color: var(--bone); font-size: 13px; }
+.cp-row { margin: 4px 0 10px; max-width: 100%; justify-content: flex-start; }
+.trade-amts { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; margin: 10px 0 12px; }
+.trade-amts .btn { min-height: 54px; }
+.ms-list { display: flex; flex-direction: column; gap: 6px; margin: 8px 0 12px; }
+.ms-row { display: grid; grid-template-columns: 140px 80px 1fr 170px; align-items: center; gap: 10px; padding: 7px 10px; border-radius: 8px; background: var(--panel-2); font-size: 12px; }
+.ms-name { font-weight: 700; font-size: 13px; }
+.ms-tier { font-weight: 700; color: var(--muted); }
+.ms-tier.t1 { color: #c27b42; } .ms-tier.t2 { color: #c7ced4; } .ms-tier.t3 { color: var(--gold); } .ms-tier.t4 { color: #9fe0d8; }
+.ms-row .cap-bar { margin: 0; }
+.ms-n { color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; }
+.lg-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; margin: 10px 0 12px; }
+.lg { display: flex; flex-direction: column; gap: 2px; padding: 10px; border-radius: 10px; background: var(--panel-2); border: 1px solid var(--line); border-top: 4px solid var(--lc); opacity: 0.6; }
+.lg.got { opacity: 1; }
+.lg.on { box-shadow: 0 0 0 2px var(--lc); }
+.lg b { font-family: var(--font-display); font-weight: 400; font-size: 15px; color: var(--lc); }
+.lg span { font-size: 12px; font-variant-numeric: tabular-nums; }
+.lg i { font-style: normal; font-size: 11px; color: var(--amber); }
+.intel-feed { list-style: none; margin: 8px 0 12px; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.intel-row { display: grid; grid-template-columns: 26px 1fr auto; align-items: center; gap: 8px; padding: 7px 10px; border-radius: 8px; background: var(--panel-2); font-size: 13px; }
+.il-t { font-size: 11px; color: var(--muted); white-space: nowrap; }
+.gear-up { margin-top: 6px; width: 100%; }
+@media (max-width: 760px) { .ms-row { grid-template-columns: 110px 64px 1fr; } .ms-n { grid-column: 1 / -1; text-align: left; } }

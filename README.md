@@ -155,6 +155,17 @@ Found with automated stress tests: battle soak runs at every Command Center leve
 - Damaged saves repair themselves (invalid resource values, a missing Command Center, unknown troops or items).
 - Units under heavy fire keep their colors instead of flashing white; the Illumination Flare is less blinding; Shield Generators are cheaper to run.
 
+## Update 4.0: Warlords
+
+**Battle:** Thunderstorms (lightning strikes the battlefield), Sandstorms (ranges -20%, common in the desert) and Blizzards (enemies 25% slower, guns 10% slower, common in winter) · morale that fills with kills and a Rally Cry (+40% fire rate, +30% troop damage for 10 s) · endless checkpoints (start at wave 11, 21, 31 and up once reached, with the field upgrades you would have earned) · a battle forecast you can reroll for 3 medals.
+**Defenses:** Sentry Gun, a one-tile auto-turret for wall lines (Command Center 3) · Drone Hangar, whose interceptor drones hunt enemies in range (Command Center 7).
+**Enemies:** Stealth Bombers make two bombing runs over the base · Shield Drones halve the damage taken by enemies near them · Flame Tanks burn through buildings.
+**Army and heroes:** Maj. Kade, the Artillery Officer (Creeping Barrage, +15% damage aura for artillery) · Shield Trooper, who blocks 35% of damage and pulls nearby enemies onto himself · gear upgrades up to level 5.
+**Campaign:** Chapter 2, Operation Warlord, six new missions ending with two Titan Mechs.
+**Base:** Vault (protects resources from surprise attacks) · Trading Post (exchange gold, steel and oil with a daily allowance) · defense mastery (Bronze to Platinum damage bonuses per defense type) · base power and leagues (Bronze to Legend, with medals) · layout share codes · Intel feed · undo-sell within 10 seconds · three new achievements.
+
+Every 4.0 feature has a logic test (74 checks), and the battle soak, UI fuzzing, save, time-warp and earlier update suites all pass.
+
 ## Code layout
 
 - `js/data.js` – building stats, costs, limits per HQ level, wave previews
@@ -172,5 +183,6 @@ Found with automated stress tests: battle soak runs at every Command Center leve
 - `js/storm.js` – Update 3.0 battle systems: new enemies and their art, Repair Bay, Shield Generator, Missile Silo, flares, supply drops, focus fire, minimap, pause menu, doctrines, War Games, Hall of Fame, after-action report
 - `js/basecamp.js` – Update 3.0 base systems: photo mode, coverage view, build queue, cargo drones, living base, new building art
 - `js/settings.js` – main menu and the tabbed Settings screen
+- `js/warlords.js` – Update 4.0: weather, morale, Sentry Gun, Drone Hangar, new enemies, Maj. Kade, Shield Trooper, checkpoints, forecast, Vault, Trading Post, mastery, leagues, gear upgrades, share codes, Intel feed, undo-sell
 - `js/game.js` – state, saving, placement, input, HUD and main loop
 - `style.css` – HUD, panels, shop and modals

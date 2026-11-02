@@ -40,8 +40,9 @@ function startBattle(mission) {
   // threat level (endless only), weather and time of day
   const threat = !mission ? (THREATS.find(t => t.id === S.threat) || THREATS[1]) : THREATS[1];
   B.threat = threat;
-  B.weather = pickWeighted(WEATHER);
-  B.daytime = mission && mission.raid ? DAYTIME[0] : pickWeighted(DAYTIME);
+  const fc = !mission ? takeForecast() : null;
+  B.weather = fc ? fc.weather : pickWeighted(weatherPool());
+  B.daytime = mission && mission.raid ? DAYTIME[0] : fc ? fc.daytime : pickWeighted(DAYTIME);
   B.lootMul = B.practice ? 0 : (mission ? 1 : threat.loot) * B.daytime.loot;
   for (const b of S.buildings) b._released = false;
   B.ab.hero = 4;
@@ -51,6 +52,7 @@ function startBattle(mission) {
   buildAbilityBar();
   buildDeployBar();
   stormBattleStart();
+  warBattleStart();
   S.stats.battles = (S.stats.battles || 0) + 1;
   if (S.tut != null && S.tut < 9) tutorialEvent('battle');
   S.battles = (S.battles || 0) + 1;
@@ -249,6 +251,7 @@ function battleUpdate(dt) {
   updateBattleFX(dt);
   updateSmokes(dt);
   stormBattleUpdate(dt);
+  warBattleUpdate(dt);
 
   if (B.phase === 'break') {
     B.breakT -= dt;
@@ -697,13 +700,14 @@ function weaponOf(b) {
     w.range *= 1 + B.bonus.range;
   }
   if (B && B.weather) w.range *= B.weather.range;
-  return w;
+  return warWeaponMod(b, w);
 }
 
 function updateDefense(b, dt) {
   const w = weaponOf(b);
   if (!w) return;
   if (b._stun > 0) return; // knocked out by an EMP Trooper
+  if (DEFS[b.type].hangar) return; // its drones do the fighting
   if (b._flash > 0) b._flash -= dt;
   b._cd -= dt;
   const c = centerOf(b);
@@ -745,7 +749,7 @@ function updateDefense(b, dt) {
   b._flash = 0.06;
   if (b.type !== 'flame' && b.type !== 'tesla' && b.type !== 'laser') {
     const lc = centerOf(b), ang = Math.atan2(b._tgt.y - lc.y, b._tgt.x - lc.x);
-    const big = !(b.type === 'mg' || b.type === 'hq' || b.type === 'watchtower');
+    const big = !(b.type === 'mg' || b.type === 'hq' || b.type === 'watchtower' || b.type === 'sentry');
     const reach = b.type === 'howitzer' ? 54 : b.type === 'cannon' ? 40 : b.type === 'hq' ? 0 : 26;
     B.fx.push({ kind: 'mflash', x: lc.x + Math.cos(ang) * reach, y: lc.y - (b.type === 'hq' ? 40 : 8) + Math.sin(ang) * reach, a: ang, r: big ? 16 : 8, life: big ? 0.09 : 0.05, max: big ? 0.09 : 0.05 });
     if (!big && gfxQuality() !== 'low' && Math.random() < 0.6) particles.push({ kind: 'casing', x: lc.x, y: lc.y - 6, vx: Math.cos(ang + 1.7) * (40 + Math.random() * 40), vy: -70 - Math.random() * 40, g: 420, floor: lc.y + 10 + Math.random() * 8, life: 0.9, max: 0.9, r: 1.5, rot: Math.random() * 6, vr: 20 });
@@ -756,6 +760,7 @@ function updateDefense(b, dt) {
   const nShots = B.shots.length;
   switch (b.type) {
     case 'mg':
+    case 'sentry':
     case 'hq':
       Sound.play('mg');
       damageEnemy(t, w.dmg, b.type);

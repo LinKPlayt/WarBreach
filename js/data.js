@@ -441,6 +441,10 @@ function waveComposition(n) {
   if (n >= 11) list.push({ type: 'kamikaze', count: Math.floor((n - 8) / 3) });
   if (n >= 15) list.push({ type: 'emptrooper', count: Math.floor((n - 13) / 3) + 1 });
   if (n >= 16) list.push({ type: 'walker', count: Math.floor((n - 14) / 4) + 1 });
+  // Update 4.0 forces
+  if (n >= 13) list.push({ type: 'shielddrone', count: Math.floor((n - 9) / 4) });
+  if (n >= 17) list.push({ type: 'flametank', count: Math.floor((n - 13) / 4) });
+  if (n >= 18) list.push({ type: 'bomber', count: 1 + Math.floor((n - 18) / 8) });
   // boss waves: a Siege Tank every fifth wave, a Titan Mech every tenth from wave 20
   if (isBossWave(n)) list.push(n % 10 === 0 && n >= 20 ? { type: 'titan', count: Math.max(1, Math.floor(n / 20)) } : { type: 'siege', count: 1 + Math.floor(n / 15) });
   return list;
@@ -1057,7 +1061,7 @@ const PHOTO_FILTERS = [
 
 // Update 3.0 support buildings a Command Center level unlocks (for the roadmap and level-up notes).
 function supportUnlockedAt(L) {
-  return ['repairbay', 'shieldgen', 'silo'].filter(t => LIMITS[t][L] > 0 && LIMITS[t][L - 1] === 0);
+  return ['repairbay', 'shieldgen', 'silo', 'sentry', 'hangar', 'vault', 'tradepost'].filter(t => LIMITS[t][L] > 0 && LIMITS[t][L - 1] === 0);
 }
 
 /* =================== Update 3.5: stability and fixes =================== */
@@ -1079,3 +1083,142 @@ const PATCH_NOTES = [
   ['Softer flares', 'The Illumination Flare is less blinding at night'],
   ['Faster shields', 'Shield Generators cost less performance in big battles'],
 ];
+
+/* =================== Update 4.0: Warlords =================== */
+const UPDATE4_VERSION = '4.0';
+
+Object.assign(DEFS, {
+  sentry: {
+    name: 'Sentry Gun', code: 'SN', cat: 'defense', size: 1, max: MAX_LEVEL,
+    desc: 'A compact auto-turret that fits in a single tile, even inside a wall line. Hits ground and air.',
+    cost: { base: { gold: 450, steel: 350 }, growth: 1.7 },
+    time: { base: 0, growth: 1 },
+    hp: { base: 450, growth: 1.45 },
+    dmg: { base: 9, growth: 1.3 }, fireRate: 3, range: 4, targets: 'both',
+  },
+  hangar: {
+    name: 'Drone Hangar', code: 'DH', cat: 'defense', size: 2, max: MAX_LEVEL, hangar: true,
+    desc: 'Launches interceptor drones that hunt down enemies anywhere within its range, on the ground or in the air.',
+    cost: { base: { gold: 9000, steel: 8000 }, growth: 1.5 },
+    time: { base: 150, growth: 1.65 },
+    hp: { base: 1100, growth: 1.28 },
+    dmg: { base: 30, growth: 1.25 }, fireRate: 2, range: 6.5, targets: 'both',
+  },
+  vault: {
+    name: 'Vault', code: 'VT', cat: 'economy', size: 2, max: MAX_LEVEL,
+    desc: 'Armored storage. Gold, steel and oil up to its protection limit can never be stolen by surprise attacks.',
+    cost: { base: { gold: 2500, steel: 3000 }, growth: 1.6 },
+    time: { base: 90, growth: 1.7 },
+    hp: { base: 1500, growth: 1.3 },
+    protect: { base: 2500, growth: 1.5 },
+  },
+  tradepost: {
+    name: 'Trading Post', code: 'TP', cat: 'economy', size: 2, max: MAX_LEVEL,
+    desc: 'Exchange gold, steel and oil. Higher levels give better rates and a bigger daily allowance.',
+    cost: { base: { gold: 4000, steel: 2000 }, growth: 1.55 },
+    time: { base: 90, growth: 1.7 },
+    hp: { base: 800, growth: 1.25 },
+  },
+});
+Object.assign(LIMITS, {
+  sentry:    [0, 0, 0, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22],
+  hangar:    [0, 0, 0, 0, 0, 0, 0, 1, 1, 2, 2, 2, 3],
+  vault:     [0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+  tradepost: [0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1],
+});
+function vaultProtect(L) { return L > 0 ? Math.round(grow(DEFS.vault.protect, L) / 50) * 50 : 0; }
+function tradeRate(L) { return Math.min(0.85, 0.6 + 0.025 * (L - 1)); }
+function tradeLimit(L) { return Math.round(3000 * Math.pow(1.45, L - 1) / 100) * 100; }
+function hangarDroneCount(L) { return 2 + Math.floor(L / 4); }
+// Trade pairs: value of one unit in gold.
+const TRADE_VALUE = { gold: 1, steel: 1, oil: 6 };
+
+Object.assign(ENEMIES, {
+  bomber:      { name: 'Stealth Bomber', hp: 900, speed: 2.2, dmg: 110, rate: 1, range: 0, splash: 1.2, bounty: 60, r: 18, air: true, bomber: true },
+  shielddrone: { name: 'Shield Drone', hp: 260, speed: 1.3, dmg: 0, rate: 1, range: 0, bounty: 22, r: 9, air: true, shieldAura: 2.5 },
+  flametank:   { name: 'Flame Tank', hp: 1100, speed: 0.55, dmg: 20, rate: 5, range: 1.8, bounty: 50, r: 14, vehicle: true, flamer: true, armor: 6 },
+});
+Object.assign(ENEMY_NOTES, {
+  bomber: 'Flies straight over the base dropping bombs, then comes back for a second run. Only anti-air can hit it.',
+  shielddrone: 'Escorts the column and halves the damage taken by every enemy close to it. Shoot it down first.',
+  flametank: 'Armored flamethrower on tracks. Burns through buildings at close range.',
+});
+
+// New weather. Theme decides how likely each one is.
+WEATHER.push(
+  { id: 'storm', name: 'Thunderstorm', weight: 1, range: 0.9, lightning: true },
+  { id: 'sand', name: 'Sandstorm', weight: 0.4, range: 0.8, slow: 0.9 },
+  { id: 'blizzard', name: 'Blizzard', weight: 0.4, range: 0.9, slow: 0.75, fireRate: 0.9 },
+);
+const THEME_WEATHER = { desert: { sand: 3, blizzard: 0, rain: 1 }, winter: { blizzard: 3, sand: 0, rain: 0.5 }, forest: { sand: 0, blizzard: 0, storm: 1.5 } };
+const STORM_WEATHERS = ['storm', 'sand', 'blizzard'];
+const FORECAST_REROLL = 3;
+
+// Morale: kills fill it, the Rally Cry spends it.
+const MORALE = { perKill: 1.5, perVehicle: 3, perBoss: 15, rallyTime: 10, fireRate: 0.4, troopDmg: 0.3 };
+
+HEROES.artillery = {
+  name: 'Maj. Kade', title: 'Artillery Officer', color: '#6b5a3a', unlock: { hq: 8 },
+  hp: 560, speed: 1.3, dmg: 16, rate: 1.5, range: 4.2, regen: 5,
+  ability: { name: 'Creeping Barrage', cd: 30, desc: 'Walks a line of eight shells toward the enemy he is facing.', dmg: 160, radius: 1.2 },
+  aura: { radius: 4, bonus: 0.15, types: ['cannon', 'mortar', 'howitzer', 'rocketarty'] },
+  bio: 'Cannons, mortars, howitzers and rocket artillery near him deal 15% more damage. Unlocks at Command Center 8.',
+};
+TROOPS.shield = { name: 'Shield Trooper', hp: 700, dmg: 7, rate: 1.2, range: 2.2, speed: 1.0, space: 3, time: 45, cost: { gold: 280, steel: 140 }, unlock: 5, r: 8, color: '#5a6a4a', taunt: 3, block: 0.35,
+  desc: 'Carries a riot shield: takes 35% less damage and pulls nearby enemies onto himself.' };
+
+// Campaign chapter 2: Operation Warlord
+CAMPAIGN.push(
+  { id: 'm13', chapter: 2, name: 'Shock and Awe', hq: 8, level: 30, gates: ['w', 'e', 'n'],
+    brief: 'Riot shields up front, EMP troopers behind them. Explosives and flame break the shield wall.',
+    waves: [W('riot', 10, 'rifleman', 16, 'emptrooper', 2), W('riot', 12, 'grenadier', 8, 'emptrooper', 3, 'tank', 2), W('riot', 14, 'emptrooper', 5, 'officer', 2, 'apc', 4), W('riot', 16, 'emptrooper', 6, 'tank', 5, 'officer', 3, 'heavy', 8)],
+    reward: { gold: 60000, steel: 45000, medals: 25 } },
+  { id: 'm14', chapter: 2, name: 'Shielded Column', hq: 8, level: 32, gates: ['w', 'e', 'n'],
+    brief: 'Shield drones escort a heavy armored column. Kill the drones and the column crumbles.',
+    waves: [W('shielddrone', 3, 'tank', 4, 'rifleman', 14), W('shielddrone', 4, 'walker', 2, 'apc', 4, 'medic', 4), W('shielddrone', 5, 'tank', 6, 'heavy', 8, 'supply', 2), W('shielddrone', 7, 'walker', 4, 'tank', 6, 'siege', 1)],
+    reward: { gold: 70000, steel: 52000, medals: 25 } },
+  { id: 'm15', chapter: 2, name: 'River Crossing', hq: 9, level: 34, gates: ['w', 'e', 'n'],
+    brief: 'Hovercraft are coming up the river while kamikaze drones dive at the guns. Watch the south.',
+    waves: [W('hover', 4, 'kamikaze', 6, 'rifleman', 12), W('hover', 6, 'kamikaze', 8, 'drone', 8), W('hover', 8, 'kamikaze', 10, 'heli', 3, 'jeep', 6), W('hover', 10, 'kamikaze', 14, 'heli', 4, 'walker', 2)],
+    reward: { gold: 80000, steel: 60000, medals: 30 } },
+  { id: 'm16', chapter: 2, name: 'Firestorm', hq: 9, level: 36, gates: ['w', 'e', 'n'], mods: { fast: 1.15 },
+    brief: 'Flame tanks and sappers want to burn the base to the ground. Everything moves 15% faster.',
+    waves: [W('flametank', 2, 'flamer', 8, 'sapper', 6), W('flametank', 4, 'flamer', 10, 'sapper', 8, 'moto', 8), W('flametank', 5, 'bulldozer', 3, 'sapper', 10, 'flamer', 12), W('flametank', 8, 'bulldozer', 4, 'sapper', 12, 'walker', 3)],
+    reward: { gold: 90000, steel: 68000, medals: 30 } },
+  { id: 'm17', chapter: 2, name: 'Black Wings', hq: 10, level: 38, gates: ['w', 'e', 'n'],
+    brief: 'Stealth bombers lead an all-out air assault. Anti-air or nothing.',
+    waves: [W('bomber', 1, 'drone', 10, 'heli', 2), W('bomber', 2, 'kamikaze', 10, 'heli', 3, 'shielddrone', 2), W('bomber', 3, 'drone', 14, 'heli', 5, 'kamikaze', 8), W('bomber', 4, 'heli', 6, 'kamikaze', 14, 'shielddrone', 4, 'drone', 12)],
+    reward: { gold: 110000, steel: 80000, medals: 35 } },
+  { id: 'm18', chapter: 2, name: 'The Warlord', hq: 10, level: 42, gates: ['w', 'e', 'n'], mods: { armored: 1.2 },
+    brief: 'General Kroll commits everything, led by two Titan Mechs. End this war.',
+    waves: [W('riot', 14, 'walker', 3, 'flametank', 3, 'shielddrone', 3), W('bomber', 2, 'heli', 5, 'kamikaze', 12, 'hover', 6), W('titan', 1, 'walker', 4, 'tank', 8, 'emptrooper', 6, 'officer', 3),
+      W('flametank', 6, 'bulldozer', 4, 'sapper', 12, 'bomber', 2), W('titan', 2, 'walker', 6, 'flametank', 5, 'shielddrone', 6, 'heli', 6, 'riot', 16)],
+    reward: { gold: 150000, steel: 110000, medals: 50 } },
+);
+
+// Defense mastery: kills by each defense type
+const MASTERY = { tiers: [100, 500, 2000, 6000], bonus: [0.03, 0.06, 0.10, 0.15], names: ['Bronze', 'Silver', 'Gold', 'Platinum'] };
+function masteryTier(kills) { let t = 0; for (const k of MASTERY.tiers) if ((kills || 0) >= k) t++; return t; }
+
+// Base power and leagues
+const LEAGUES = [
+  { name: 'Bronze', power: 0, medals: 0, color: '#c27b42' },
+  { name: 'Silver', power: 1500, medals: 5, color: '#c7ced4' },
+  { name: 'Gold', power: 5000, medals: 10, color: '#f2b632' },
+  { name: 'Platinum', power: 14000, medals: 20, color: '#9fe0d8' },
+  { name: 'Diamond', power: 32000, medals: 40, color: '#6ec0ff' },
+  { name: 'Legend', power: 60000, medals: 80, color: '#ff8a73' },
+];
+
+// Gear upgrades
+const GEAR_MAX_LEVEL = 5;
+function gearUpgradeCost(lvl) { return { medals: 2 * lvl, steel: 1500 * lvl * lvl }; }
+
+// Layout share codes
+const SHARE_PREFIX = 'WB4:';
+
+ACHIEVEMENTS.push(
+  { id: 'mastery', name: 'Weapons Master', stat: s => Object.values(s.mastery || {}).reduce((a, k) => a + masteryTier(k), 0), tiers: [3, 12, 30], medals: [5, 15, 40], unit: 'mastery tiers earned' },
+  { id: 'league', name: 'League Climber', stat: s => s.leagueBest || 0, tiers: [2, 4, 5], medals: [5, 15, 40], unit: 'best league reached' },
+  { id: 'storms', name: 'Storm Chaser', stat: s => s.stats.storms || 0, tiers: [3, 15, 50], medals: [5, 12, 30], unit: 'battles in storms, sand or blizzards' },
+);

@@ -79,6 +79,8 @@ function stormChips(b, L, nextL) {
   const chip = (label, v, nv) => `<span class="chip"><b>${label}</b>${v}${nv != null && nv !== v ? `<i>&rarr; ${nv}</i>` : ''}</span>`;
   if (b.type === 'repairbay') return chip('REPAIR', repairRate(L) + '/s', nextL && repairRate(nextL) + '/s') + chip('DRONES', DEFS.repairbay.drones) + chip('REACH', DEFS.repairbay.healRange + ' tiles');
   if (b.type === 'shieldgen') return chip('SHIELD', fmt(shieldHp(L)), nextL && fmt(shieldHp(nextL))) + chip('DOME', DEFS.shieldgen.shieldRange + ' tiles') + chip('RECHARGE', DEFS.shieldgen.recharge + 's');
+  const war = warChips(b, L, nextL);
+  if (war) return war;
   if (b.type === 'silo') return chip('WARHEAD', fmt(nukeDamage(L)), nextL && fmt(nukeDamage(nextL))) + chip('FUELING', siloCharge(L) + 's', nextL && siloCharge(nextL) + 's') + chip('BLAST', DEFS.silo.radius + ' tiles');
   return '';
 }
@@ -86,7 +88,7 @@ function stormChips(b, L, nextL) {
 /* ================= Photo mode ================= */
 const PHOTO = { on: false, filter: 'none', tod: 'auto', weather: 'auto', inBattle: false };
 const PHOTO_TODS = [['auto', 'Live'], ['day', 'Day'], ['dusk', 'Dusk'], ['night', 'Night']];
-const PHOTO_WEATHER = [['auto', 'Live'], ['clear', 'Clear'], ['rain', 'Rain'], ['fog', 'Fog'], ['snow', 'Snow']];
+const PHOTO_WEATHER = [['auto', 'Live'], ['clear', 'Clear'], ['rain', 'Rain'], ['fog', 'Fog'], ['snow', 'Snow'], ['storm', 'Storm'], ['sand', 'Sandstorm'], ['blizzard', 'Blizzard']];
 
 function startPhotoMode() {
   if (PHOTO.on) return;
@@ -449,6 +451,7 @@ function stormUpdate(dt) {
   updateCargo(dt);
   updateLife(dt);
   updateZoomAnim(dt);
+  warBaseUpdate(dt);
 }
 
 /* ================= What's new in 3.0 ================= */

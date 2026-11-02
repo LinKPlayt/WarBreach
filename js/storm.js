@@ -93,6 +93,7 @@ function stormSpawned(u, e) {
 // Runs inside updateEnemy. Returning true means the unit was fully handled this frame.
 function stormEnemyUpdate(u, e, dt) {
   if (u.cmdT > 0) { u.cmdT -= dt; u.slow *= 1.2; }
+  if (warEnemyUpdate(u, e, dt)) return true;
   if (u.river) {
     const pts = GFX.river.pts, p = pts[u.river.i];
     const dx = p.x - u.x, dy = p.y - u.y, d = Math.hypot(dx, dy) || 1;
@@ -148,6 +149,7 @@ function stormEnemyUpdate(u, e, dt) {
 }
 
 function stormDamageMod(u, ed, dmg, src) {
+  dmg = warDamageMod(u, ed, dmg, src);
   if (ed.shield && BULLET_SRC.has(src)) {
     dmg *= 1 - ed.shield;
     if (Math.random() < 0.25) particles.push({ x: u.x + Math.cos(u.aim) * 8, y: u.y + Math.sin(u.aim) * 8, vx: (Math.random() - 0.5) * 80, vy: -40 - Math.random() * 40, g: 200, life: 0.25, max: 0.25, r: 1.4, color: '#ffe8a0', glow: true });
@@ -170,6 +172,7 @@ function stormEnemyKilled(u, e) {
     Sound.play('medal');
   }
   if (u.type === 'titan') S.stats.titans = (S.stats.titans || 0) + 1;
+  warEnemyKilled(u, e);
 }
 
 /* ================= Shield Generator ================= */
@@ -480,6 +483,7 @@ function drawStormGround(ctx) {
     ctx.drawImage(glowSprite('#fff4d0'), f.x - f.r, f.y - f.r * 0.8, f.r * 2, f.r * 1.6);
     ctx.restore();
   }
+  drawWarGround(ctx);
 }
 
 function drawStormAir(ctx) {
@@ -545,6 +549,7 @@ function drawStormAir(ctx) {
     for (let i = 0; i < 4; i++) { ctx.rotate(Math.PI / 2); ctx.beginPath(); ctx.arc(0, 0, r, -0.45, 0.45); ctx.stroke(); ctx.beginPath(); ctx.moveTo(r - 4, 0); ctx.lineTo(r + 5, 0); ctx.stroke(); }
     ctx.restore();
   }
+  drawWarAir(ctx);
 }
 
 function drawTransport(ctx, x, y, a) {
@@ -586,6 +591,7 @@ function stormLights(L, C) {
   for (const m of B.missiles) L.push({ x: m.x, y: m.y - m.h * 0.3, r: 70, i: 0.9, c: C.fire, hot: true });
   for (const c of B.crates) if (c.h <= 0) L.push({ x: c.x, y: c.y - 20, r: 30, i: 0.5 + Math.sin(tSec * 6) * 0.4, c: C.red });
   if (B.nukeFlash > 0) L.push({ x: cam.x, y: cam.y, r: 4000, i: B.nukeFlash, c: C.white, hot: true });
+  warLights(L, C);
 }
 
 /* ================= Enemy art ================= */
@@ -785,7 +791,7 @@ function openPause() {
 
 /* ================= After-action report ================= */
 function stormReportHTML() {
-  const names = { hq: 'Command Center gun', airstrike: 'Airstrikes', artillery: 'Artillery barrage', troops: 'Your troops', silo: 'Strategic missile', mine: 'Land mines', wire: 'Barbed wire', hero: B.hero ? HEROES[B.hero.id].name : 'Hero' };
+  const names = { hq: 'Command Center gun', airstrike: 'Airstrikes', artillery: 'Artillery barrage', troops: 'Your troops', silo: 'Strategic missile', lightning: 'Lightning', mine: 'Land mines', wire: 'Barbed wire', hero: B.hero ? HEROES[B.hero.id].name : 'Hero' };
   const rows = Object.entries(B.dmgBy).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]).slice(0, 6);
   const top = rows.length ? rows[0][1] : 1;
   const bars = rows.length ? rows.map(([k, v]) => `<li class="bar-row"><span>${names[k] || (DEFS[k] ? DEFS[k].name : k)}</span><i style="--w:${(v / top * 100).toFixed(1)}%"></i><b>${fmt(v)}</b></li>`).join('') : '<li class="bar-row"><span>No damage dealt</span><i style="--w:0%"></i><b>0</b></li>';
@@ -808,7 +814,7 @@ function decorateReport() {
 
 /* ================= Hall of Fame ================= */
 function recordRun() {
-  if (!B || B.mission || B.practice || B.waves < 1) return 0;
+  if (!B || B.mission || B.practice || B.waves < 1 || (B.checkpoint && B.waves <= B.checkpoint)) return 0;
   if (!S.hof) S.hof = [];
   const run = { wave: B.waves, kills: B.kills, threat: B.threat.name, date: Date.now(), hero: B.hero ? HEROES[B.hero.id].name : '', streak: B.bestStreak, wg: B.wg.length, gold: B.loot.gold };
   S.hof.push(run);
@@ -864,6 +870,7 @@ function briefExtrasHTML() {
   return `
     <h3 class="report-h">War Games <small>${wg.length}/${WARGAMES_MAX} · ${bonus ? `+${bonus}% loot` : 'optional, extra loot'}</small></h3>
     <div class="wg-row">${WARGAMES.map(w => `<button class="wg ${wg.includes(w.id) ? 'on' : ''}" data-wg="${w.id}"><b>${w.name}</b><span>${w.desc}</span><i>+${Math.round(w.loot * 100)}%</i></button>`).join('')}</div>
+    ${warBriefHTML()}
     <div class="doc-line">${doctrineUnlocked() ? `Doctrine: <b>${doctrine().name}</b> · ${doctrine().desc} <button class="btn ghost small" id="btn-doctrine">Change</button>` : `Doctrines unlock at Command Center ${DOCTRINE_HQ}`}</div>`;
 }
 function wireBriefExtras(reopen) {
@@ -878,6 +885,7 @@ function wireBriefExtras(reopen) {
   }));
   const d = body.querySelector('#btn-doctrine');
   if (d) d.addEventListener('click', () => openDoctrines(reopen));
+  warWireBrief(reopen);
 }
 
 /* ================= Battle UI wiring ================= */

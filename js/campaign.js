@@ -80,7 +80,7 @@ function openCampaign() {
     const stars = missionStars(m.id);
     const state = !open ? 'locked' : stars ? 'done' : 'open';
     const under = hqLevel() < m.hq;
-    return `
+    return `${m.chapter === 2 && !(CAMPAIGN[i - 1] && CAMPAIGN[i - 1].chapter === 2) ? '<div class="chap">Chapter 2 · Operation Warlord</div>' : ''}
       <button class="op ${state} ${i === nextIdx ? 'current' : ''}" data-mission="${i}" ${open ? '' : 'aria-disabled="true"'}>
         <span class="op-pin"><span>${i + 1}</span></span>
         <span class="op-name">${open ? m.name : 'Classified'}</span>

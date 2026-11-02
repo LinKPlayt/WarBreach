@@ -51,7 +51,7 @@ function resetSkills(id) {
 
 /* ----- Gear ----- */
 function gearItem(gid) { return (S.gear || []).find(g => g.id === gid) || null; }
-function gearValue(g) { return GEAR_STAT[g.slot].base * GEAR_TIERS.find(t => t.id === g.tier).mult; }
+function gearValue(g) { return GEAR_STAT[g.slot].base * GEAR_TIERS.find(t => t.id === g.tier).mult * (1 + 0.2 * ((g.lvl || 1) - 1)); }
 function gearBonus(id) {
   const out = { dmg: 0, hp: 0, cd: 0 };
   const eq = (heroState(id).gear) || {};
@@ -87,7 +87,7 @@ function salvageGear(gid) {
   if (!g) return;
   for (const hid of Object.keys(HEROES)) { const o = heroState(hid).gear; if (o && o[g.slot] === gid) delete o[g.slot]; }
   S.gear = S.gear.filter(x => x.id !== gid);
-  const m = g.tier === 'epic' ? 6 : g.tier === 'rare' ? 3 : 1;
+  const m = (g.tier === 'epic' ? 6 : g.tier === 'rare' ? 3 : 1) + ((g.lvl || 1) - 1) * 2;
   S.medals += m; toast(`Salvaged for ${m} medal${m > 1 ? 's' : ''}`, 'good'); save();
 }
 
@@ -271,6 +271,7 @@ function useHeroAbility() {
     for (let i = 0; i < 4; i++) B.heroDrones.push({ x: H.x, y: H.y - 20, a: i * Math.PI / 2, life: def.ability.life, cd: Math.random() * 0.3, dmg: def.ability.dmg * heroScale(st.level), tgt: null, flash: 0, temp: true });
     Sound.play('plane');
   }
+  else if (H.id === 'artillery') kadeBarrage(H, st, def);
   B.ab.hero = def.ability.cd * st.cdMul;
   orderEvent('ability', 1);
 }

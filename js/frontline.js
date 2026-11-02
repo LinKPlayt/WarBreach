@@ -395,7 +395,8 @@ function checkSurpriseAttack(awayMs) {
     report = { won, gold: g, steel: st2 };
   } else {
     const lossFrac = Math.min(0.15, 0.06 + (1 - ratio) * 0.1);
-    const g = Math.floor(S.gold * lossFrac), st2 = Math.floor(S.steel * lossFrac);
+    const prot = vaultProtection();
+    const g = Math.floor(Math.max(0, S.gold - prot) * lossFrac), st2 = Math.floor(Math.max(0, S.steel - prot) * lossFrac);
     S.gold -= g; S.steel -= st2;
     report = { won, gold: -g, steel: -st2 };
   }
@@ -579,6 +580,9 @@ function openHub() {
     { id: 'doctrine', name: 'Doctrine', sub: doctrineUnlocked() ? doctrine().name : `Command Center ${DOCTRINE_HQ}`, fn: () => openDoctrines(openHub) },
     { id: 'hof', name: 'Hall of Fame', sub: (S.hof || []).length ? `Best run: wave ${S.hof[0].wave}` : 'Your best runs', fn: () => openHallOfFame(openHub) },
     { id: 'coverage', name: 'Coverage view', sub: 'Find gaps in your defenses', fn: startCoverage },
+    { id: 'trade', name: 'Trading Post', sub: tradePostLevel() ? `${fmt(tradeAllowance())} allowance left` : 'Command Center 5', fn: openTrading },
+    { id: 'mastery', name: 'Mastery', sub: 'Defense kill bonuses', fn: () => openMastery(openHub) },
+    { id: 'intel', name: 'Intel feed', sub: S.logUnread ? `${S.logUnread} new` : 'Base activity', dot: !!S.logUnread, fn: () => openIntel(openHub) },
   ];
   openModal(`
     <div class="settings">

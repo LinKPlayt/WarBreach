@@ -195,6 +195,7 @@ function nearestAlly(x, y, reach) {
 function damageAlly(a, dmg) {
   if (a === B.hero) { damageHero(dmg); return; }
   if (TROOPS[a.kind].vehicle) dmg *= 0.7;
+  if (TROOPS[a.kind].block) dmg *= 1 - TROOPS[a.kind].block;
   a.hp -= dmg; a.hit = 0.1;
   if (a.hp <= 0) {
     a.hp = 0;

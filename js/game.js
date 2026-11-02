@@ -78,6 +78,12 @@ function migrate(s) {
   s.army.queue = (s.army.queue || []).filter(q => q && TROOPS[q.type] && Number.isFinite(q.end));
   for (const k of Object.keys(s.items)) if (!ITEMS[k]) delete s.items[k];
   s.queue = s.queue.filter(q => q && s.buildings.some(b => b.id === q.id));
+  // Update 4.0
+  if (!s.mastery || typeof s.mastery !== 'object') s.mastery = {};
+  if (!Array.isArray(s.log)) s.log = [];
+  if (!Number.isInteger(s.checkpoint)) s.checkpoint = 0;
+  if (!Number.isInteger(s.leagueBest)) s.leagueBest = 0;
+  for (const g of (s.gear || [])) if (g.lvl != null && !(g.lvl >= 1 && g.lvl <= GEAR_MAX_LEVEL)) g.lvl = 1;
   return s;
 }
 
@@ -1141,6 +1147,7 @@ function buildPanel(b, up) {
     actions += `<button class="btn ghost" data-act="move">Move</button>`;
     if (b.type === 'hq') actions += `<button class="btn ghost" data-act="roadmap">Roadmap</button>`;
     if (b.type === 'workshop' && b.level >= 1) actions += `<button class="btn" data-act="workshop"><span class="btn-main">Craft</span><span class="btn-sub">${(S.craft || []).length ? `${S.craft.length} in production` : 'Ready'}</span></button>`;
+    if (b.type === 'tradepost' && b.level >= 1) actions += `<button class="btn" data-act="trade"><span class="btn-main">Trade</span><span class="btn-sub">${fmt(tradeAllowance())} left today</span></button>`;
     if (b.type === 'barracks' && b.level >= 1) actions += `<button class="btn" data-act="barracks"><span class="btn-main">Train</span><span class="btn-sub">Army ${armySpace()}/${armyCapacity()}</span></button>`;
     if (b.type === 'lab' && b.level >= 1) actions += `<button class="btn medal-btn" data-act="research"><span class="btn-main">Research</span><span class="btn-sub">${S.research.job ? fmtTime((S.research.job.end - Date.now()) / 1000) : 'Ready'}</span></button>`;
     if (b.type !== 'hq') {
@@ -1179,6 +1186,7 @@ panel.addEventListener('click', e => {
   else if (act === 'research') { openResearch(); return; }
   else if (act === 'barracks') { openBarracks(); return; }
   else if (act === 'workshop') { openWorkshop(); return; }
+  else if (act === 'trade') { openTrading(); return; }
   else if (act === 'spec') { openSpec(b); return; }
   else if (act === 'priority') {
     const i = PRIORITIES.findIndex(p => p.id === (b.priority || 'close'));
@@ -1754,6 +1762,7 @@ function start(hotData) {
   let saved = hotData && hotData.save ? load(hotData.save) : null;
   if (!saved) { try { saved = load(localStorage.getItem(SAVE_KEY)); } catch (e) { saved = null; } }
   S = saved || newBase();
+  initWarlords();
   if (saved) { const away = Date.now() - (S.saved || Date.now()); applyOffline(away / 1000); checkSurpriseAttack(away); }
   rebuildGrid();
   applySettings();
@@ -1770,7 +1779,7 @@ function start(hotData) {
   $('#btn-gift').addEventListener('click', () => { if (!B) { Sound.play('click'); openLogin(); } });
   $('#btn-chest').addEventListener('click', () => { if (!B) { Sound.play('click'); openChest(); } });
   $('#medals').addEventListener('click', () => { if (!B) { Sound.play('click'); openQuartermaster(); } });
-  setTimeout(() => { if (!B && modal.hidden && !showSurpriseReport() && !maybeShowWhatsNew3() && !maybeShowWhatsNew2()) maybeShowWhatsNew(); }, 700);
+  setTimeout(() => { if (!B && modal.hidden && !showSurpriseReport() && !maybeShowWhatsNew4() && !maybeShowWhatsNew3() && !maybeShowWhatsNew2()) maybeShowWhatsNew(); }, 700);
   $('#btn-hub').addEventListener('click', () => { Sound.play('click'); openHub(); });
   $('#edit-done').addEventListener('click', () => setEditMode(false));
   Music.start();

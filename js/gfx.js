@@ -613,6 +613,7 @@ function drawPostFX() {
   }
   const calm = S.settings.reducemotion ? 0.3 : 1;
   if (B && B.empFlash > 0) { ctx.fillStyle = `rgba(150,210,255,${B.empFlash * calm})`; ctx.fillRect(0, 0, vw, vh); }
+  if (B && B.lightFlash > 0) { ctx.fillStyle = `rgba(225,235,255,${Math.min(0.35, B.lightFlash * 0.35) * calm})`; ctx.fillRect(0, 0, vw, vh); }
   if (B && B.nukeFlash > 0) { ctx.fillStyle = `rgba(255,248,230,${Math.min(0.92, B.nukeFlash) * calm})`; ctx.fillRect(0, 0, vw, vh); }
 }
 
@@ -637,8 +638,19 @@ function drawWeather() {
   const photoW = typeof PHOTO !== 'undefined' && PHOTO.on && PHOTO.weather !== 'auto' ? PHOTO.weather : null;
   if (!photoW && S.settings.weatherfx === false) return;
   const wid = photoW || (B && B.weather ? B.weather.id : 'clear');
-  const rain = wid === 'rain', fog = wid === 'fog';
-  const snow = photoW ? photoW === 'snow' : S.theme === 'winter';
+  const rain = wid === 'rain' || wid === 'storm', fog = wid === 'fog', sand = wid === 'sand', bliz = wid === 'blizzard';
+  const snow = bliz || (photoW ? photoW === 'snow' : S.theme === 'winter');
+  if (sand) {
+    // a warm haze with grit streaking across the screen
+    ctx.fillStyle = 'rgba(196,160,98,0.28)'; ctx.fillRect(0, 0, vw, vh);
+    const g = ctx.createLinearGradient(0, 0, vw, vh); g.addColorStop(0, 'rgba(220,180,110,0.25)'); g.addColorStop(1, 'rgba(150,110,60,0.1)');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, vw, vh);
+    if (!GFX.sand) GFX.sand = [];
+    while (GFX.sand.length < (q === 'low' ? 30 : 90)) GFX.sand.push({ x: Math.random() * vw, y: Math.random() * vh, s: 300 + Math.random() * 300, l: 14 + Math.random() * 30 });
+    ctx.strokeStyle = 'rgba(235,205,150,0.4)'; ctx.lineWidth = 1.2; ctx.beginPath();
+    for (const p of GFX.sand) { p.x += p.s * frameDt; p.y += p.s * 0.08 * frameDt; if (p.x > vw + 40) { p.x = -40; p.y = Math.random() * vh; } ctx.moveTo(p.x, p.y); ctx.lineTo(p.x - p.l, p.y - p.l * 0.08); }
+    ctx.stroke();
+  }
   if (fog) {
     const t = tSec * 8;
     ctx.globalAlpha = 0.34;
@@ -667,11 +679,15 @@ function drawWeather() {
     GFX.splashes = GFX.splashes.filter(s => s.life > 0);
     ctx.fillStyle = 'rgba(40,55,70,0.14)'; ctx.fillRect(0, 0, vw, vh);
   }
+  if (bliz) { ctx.fillStyle = 'rgba(225,235,245,0.2)'; ctx.fillRect(0, 0, vw, vh); }
   if (snow && q !== 'low') {
-    while (GFX.snow.length < (q === 'ultra' ? 110 : 60)) GFX.snow.push({ x: Math.random() * vw, y: Math.random() * vh, s: 25 + Math.random() * 45, r: 0.8 + Math.random() * 2, ph: Math.random() * 6 });
+    const want = (q === 'ultra' ? 110 : 60) * (bliz ? 2.5 : 1);
+    while (GFX.snow.length < want) GFX.snow.push({ x: Math.random() * vw, y: Math.random() * vh, s: 25 + Math.random() * 45, r: 0.8 + Math.random() * 2, ph: Math.random() * 6 });
+    if (GFX.snow.length > want) GFX.snow.length = want;
     ctx.fillStyle = 'rgba(255,255,255,0.85)';
     for (const f of GFX.snow) {
-      f.y += f.s * frameDt; f.x += Math.sin(tSec + f.ph) * 12 * frameDt;
+      f.y += f.s * (bliz ? 2.4 : 1) * frameDt; f.x += (bliz ? -140 : Math.sin(tSec + f.ph) * 12) * frameDt;
+      if (f.x < -6) f.x = vw + 4;
       if (f.y > vh + 4) { f.y = -4; f.x = Math.random() * vw; }
       ctx.beginPath(); ctx.arc(f.x, f.y, f.r, 0, Math.PI * 2); ctx.fill();
     }
