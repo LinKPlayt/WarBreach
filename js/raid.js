@@ -43,7 +43,7 @@ function updateRaid(dt) {
   if (!R.max) { const boss = B.units.find(u => ENEMIES[u.type].raidBoss); if (boss) R.max = boss.max; }
   if (B.phase !== 'fight') return;
   R.t -= dt;
-  if (R.t <= 0 && !B.over) { R.t = 0; B.phase = 'won'; banner('Time is up', 'The Behemoth withdraws'); setTimeout(() => endBattle('timeup'), 900); }
+  if (R.t <= 0 && !B.over) { R.t = 0; B.phase = 'won'; banner('Time is up', `The ${ENEMIES[B.mission.boss].name} withdraws`); const b0 = B; setTimeout(() => { if (B === b0) endBattle('timeup'); }, 900); }
 }
 
 function raidHit(u, dmg) {
@@ -77,7 +77,7 @@ function raidBossDown(u) {
   addShake(10);
   banner(`${ENEMIES[u.type].name} destroyed`, 'Outstanding work, Commander');
   B.phase = 'won';
-  setTimeout(() => endBattle('victory'), 1600);
+  const b0 = B; setTimeout(() => { if (B === b0) endBattle('victory'); }, 1600);
 }
 
 function endRaid(reason) {

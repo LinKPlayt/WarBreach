@@ -100,7 +100,7 @@ function supplyPulse(u, dt) {
 function workshopLevel() { return S.buildings.filter(b => b.type === 'workshop').reduce((m, b) => Math.max(m, b.level), 0); }
 function itemButtons() {
   return Object.keys(ITEMS).filter(k => (S.items[k] || 0) > 0).map(k => `
-    <button class="dp dp-cmd dp-item" data-dp="item:${k}" aria-label="${ITEMS[k].name}"><span class="dp-ico">${ITEM_ICONS[k]}</span><span class="dp-l">${ITEMS[k].name.split(' ')[0]}</span><span class="dp-n">${S.items[k]}</span></button>`).join('');
+    <button class="dp dp-cmd dp-item" data-dp="item:${k}" aria-label="${ITEMS[k].name}"><span class="dp-ico">${ITEM_ICONS[k]}</span><span class="dp-l">${ITEMS[k].short || ITEMS[k].name.split(' ')[0]}</span><span class="dp-n">${S.items[k]}</span></button>`).join('');
 }
 const ITEM_ICONS = {
   minekit: '<svg viewBox="0 0 20 20"><circle cx="10" cy="11" r="6" fill="currentColor"/><path d="M10 2v4M4 5l2 2M16 5l-2 2" stroke="currentColor" stroke-width="1.8"/></svg>',

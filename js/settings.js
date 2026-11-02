@@ -9,6 +9,7 @@ const SETTINGS_SCHEMA = {
   graphics: [
     { k: 'quality', label: 'Graphics quality', desc: 'Ultra adds bloom and film grain. Low saves battery.', opts: [['ultra', 'Ultra'], ['high', 'High'], ['low', 'Low']],
       get: () => gfxQuality(), set: v => { S.settings.lowfx = v === 'low'; S.settings.gfx = v === 'low' ? 'high' : v; S.settings.gfxManual = true; } },
+    { k: 'uiSize', label: 'Interface size', desc: 'Compact gives the battlefield more room on phones. Auto uses it on any phone-sized screen.', opts: [['auto', 'Auto'], ['compact', 'Compact'], ['standard', 'Standard']], def: 'auto', after: () => applyUiSize() },
     { k: 'res', label: 'Resolution', desc: 'Lower resolution runs faster and cooler on older phones.', opts: [[1, 'Sharp'], [0.75, 'Balanced'], [0.5, 'Saver']], def: 1, after: () => resize() },
     { k: 'fps', label: 'Frame rate', desc: '30 FPS saves battery.', opts: [[60, '60 FPS'], [30, '30 FPS']], def: 60 },
     { k: 'daycycle', label: 'Day and night', desc: 'Live follows the clock on your phone.', opts: [[true, 'Live'], [false, 'Always day'], ['night', 'Always night']], def: true },
@@ -66,7 +67,7 @@ function openSettings(back, tab) {
     <div class="settings set-wrap">
       <div class="m-head set-head"><h2>Settings</h2><div class="tabs set-tabs">${SET_TABS.map(([id, name]) => `<button class="tab ${id === setTab ? 'on' : ''}" data-st="${id}">${name}</button>`).join('')}</div></div>
       <div class="set-body" id="set-body"></div>
-      <div class="settings-row set-foot"><span class="set-ver">WarBreach ${UPDATE5_VERSION} · Legends</span><button class="btn" data-close>Done</button></div>
+      <div class="settings-row set-foot"><span class="set-ver">WarBreach ${PATCH5_VERSION} · Legends</span><button class="btn" data-close>Done</button></div>
     </div>`, back || null);
   const body = $('#modal-body');
   body.querySelectorAll('[data-st]').forEach(t => t.addEventListener('click', () => {
@@ -159,7 +160,7 @@ function openMenu() {
     { id: 'ach', name: 'Achievements', sub: `${achClaimable()} to claim`, dot: achClaimable() > 0, fn: () => { openAchievements(); modalOnClose = openMenu; } },
     { id: 'wardrobe', name: 'Wardrobe', sub: 'Skins, flags and camo', fn: openWardrobe },
     { id: 'layouts', name: 'Layouts', sub: 'Save and edit your base', fn: openLayouts },
-    { id: 'news', name: "What's new", sub: `Update ${UPDATE5_VERSION}`, fn: () => openWhatsNew5(openMenu) },
+    { id: 'news', name: "What's new", sub: `Update ${PATCH5_VERSION}`, fn: () => openWhatsNew5(openMenu) },
     { id: 'fs', name: 'Fullscreen', sub: 'Hide the browser bars', fn: () => { closeModal(); toggleFullscreen(); } },
   ];
   openModal(`
@@ -193,8 +194,15 @@ function openManual() {
 
 /* ---------------- Applying settings ---------------- */
 let fpsEl = null, fpsN = 0, fpsT = 0;
+// Compact HUD for phones: on when chosen, or on Auto whenever the screen's short side is phone-sized.
+function uiCompact() {
+  const v = (S && S.settings && S.settings.uiSize) || 'auto';
+  return v === 'compact' || (v === 'auto' && Math.min(window.innerWidth, window.innerHeight) <= 500);
+}
+function applyUiSize() { document.body.classList.toggle('compact', uiCompact()); }
 function applyStormSettings() {
   const st = S.settings;
+  applyUiSize();
   document.body.classList.toggle('reduce-motion', !!st.reducemotion);
   document.body.classList.toggle('contrast', !!st.contrast);
   if (!fpsEl) fpsEl = document.getElementById('fps');
@@ -214,5 +222,6 @@ function bgAudio(hidden) {
 
 function initSettingsUI() {
   document.addEventListener('visibilitychange', () => bgAudio(document.hidden));
+  window.addEventListener('resize', applyUiSize);
   applyStormSettings();
 }

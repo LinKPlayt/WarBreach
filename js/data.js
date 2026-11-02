@@ -890,12 +890,12 @@ const OUTPOSTS = [
 
 // Workshop consumables, used from the deploy bar in battle.
 const ITEMS = {
-  minekit:  { name: 'Mine Refill', desc: 'Re-arms every land mine', cost: { steel: 400 }, time: 120, hq: 3 },
-  medkit:   { name: 'Med Kit', desc: 'Heals your troops and hero by 60%', cost: { gold: 500 }, time: 120, hq: 3 },
-  overdrive:{ name: 'Overdrive', desc: 'Defenses fire 50% faster for 15 seconds', cost: { gold: 600, steel: 600 }, time: 240, hq: 4 },
-  sandbags: { name: 'Sandbag Drop', desc: 'Repairs every wall and gate by 50%', cost: { steel: 700 }, time: 180, hq: 3 },
-  smokepot: { name: 'Smoke Charge', desc: 'A smoke cloud at your Command Center', cost: { gold: 300, steel: 300 }, time: 150, hq: 4 },
-  fuelbomb: { name: 'Fuel Bomb', desc: 'Huge explosion where you tap', cost: { steel: 500, oil: 120 }, time: 300, hq: 5 },
+  minekit:  { name: 'Mine Refill', short: 'Mines', desc: 'Re-arms every land mine', cost: { steel: 400 }, time: 120, hq: 3 },
+  medkit:   { name: 'Med Kit', short: 'Med', desc: 'Heals your troops and hero by 60%', cost: { gold: 500 }, time: 120, hq: 3 },
+  overdrive:{ name: 'Overdrive', short: 'Boost', desc: 'Defenses fire 50% faster for 15 seconds', cost: { gold: 600, steel: 600 }, time: 240, hq: 4 },
+  sandbags: { name: 'Sandbag Drop', short: 'Bags', desc: 'Repairs every wall and gate by 50%', cost: { steel: 700 }, time: 180, hq: 3 },
+  smokepot: { name: 'Smoke Charge', short: 'Smoke', desc: 'A smoke cloud at your Command Center', cost: { gold: 300, steel: 300 }, time: 150, hq: 4 },
+  fuelbomb: { name: 'Fuel Bomb', short: 'Fuel', desc: 'Huge explosion where you tap', cost: { steel: 500, oil: 120 }, time: 300, hq: 5 },
 };
 function itemCap(wsLevel) { return 1 + Math.floor((wsLevel || 0) / 2); }
 
@@ -1225,6 +1225,7 @@ ACHIEVEMENTS.push(
 
 /* =================== Update 5.0: Legends =================== */
 const UPDATE5_VERSION = '5.0';
+const PATCH5_VERSION = '5.1';
 
 Object.assign(DEFS, {
   vengeance: {

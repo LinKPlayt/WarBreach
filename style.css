@@ -1151,3 +1151,145 @@ body.photo .rally-btn, body.photo #btn-undo { display: none !important; }
 .alb i { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 6px; background: #41582d; }
 .alb:not(.got) i canvas { filter: grayscale(1) brightness(0.5); }
 .alb b { font-size: 11px; line-height: 1.15; } .alb span { font-size: 10px; color: var(--muted); }
+
+/* ---------- Battle side column (standard layout) ---------- */
+/* Launch and Rally sit clear of the Speed button; Rally drops into Launch's slot when there is no Missile Silo. */
+.nuke-btn { bottom: calc(102px + var(--safe-b)); }
+.rally-btn { bottom: calc(170px + var(--safe-b)); }
+body:has(#btn-nuke[hidden]) .rally-btn { bottom: calc(102px + var(--safe-b)); }
+@media (max-height: 420px) {
+  .nuke-btn { bottom: calc(90px + var(--safe-b)); }
+  .rally-btn { bottom: calc(158px + var(--safe-b)); }
+  body:has(#btn-nuke[hidden]) .rally-btn { bottom: calc(90px + var(--safe-b)); }
+}
+#btn-collect { animation-name: riseUp; }
+@keyframes riseUp { from { transform: translateY(14px); opacity: 0; } }
+.dp-l { max-width: 100%; overflow: hidden; white-space: nowrap; }
+
+/* ---------- Compact interface (phones, or Settings > Interface size > Compact) ---------- */
+/* Top bar: about 40px tall instead of 50 */
+body.compact #hud-top { gap: 6px; padding-top: calc(6px + var(--safe-t)); }
+body.compact .hud-box { border-radius: 7px; }
+body.compact #hq-badge { gap: 6px; padding: 3px 9px 3px 3px; }
+body.compact #hq-badge .rank { width: 26px; height: 26px; font-size: 15px; }
+body.compact .base-name { font-size: 12px; }
+body.compact #hq-badge .sub { display: none; }
+body.compact .xp-bar { margin-top: 4px; }
+body.compact .res-group { gap: 6px; }
+body.compact .res { min-width: 0; gap: 5px; padding: 3px 8px 3px 5px; }
+body.compact .res .ico { width: 17px; height: 17px; }
+body.compact .res .amt { font-size: 13px; }
+body.compact .res .cap { font-size: 9px; }
+body.compact .res .bar { height: 3px; }
+body.compact #medals, body.compact #builders { height: 34px; padding: 0 8px; gap: 4px; font-size: 13px; }
+body.compact #medals .ico, body.compact #builders .ico { width: 16px; height: 16px; }
+body.compact #hud-top .icon-btn { width: 34px; height: 34px; }
+body.compact #hud-top .icon-btn svg { width: 17px; height: 17px; }
+body.compact #btn-missions .dot:not(:empty) { top: -4px; right: -4px; min-width: 16px; height: 16px; font-size: 10px; }
+@media (max-width: 860px) { body.compact #hq-badge .badge-text { display: none; } body.compact #hq-badge { padding: 3px; } }
+@media (max-width: 720px) { body.compact .res .cap { display: none; } }
+
+/* Corner buttons */
+body.compact .big-btn { bottom: calc(8px + var(--safe-b)); width: 62px; height: 60px; border-radius: 12px; font-size: 12px; gap: 1px; }
+body.compact .big-btn svg { width: 22px; height: 22px; }
+body.compact #btn-battle { width: 78px; height: 64px; font-size: 14px; border-width: 2px; outline-width: 2px; }
+body.compact #btn-campaign { bottom: calc(80px + var(--safe-b)); padding: 5px 9px; gap: 5px; font-size: 12px; }
+body.compact #btn-campaign svg { width: 16px; height: 16px; }
+body.compact #btn-collect { bottom: calc(76px + var(--safe-b)); padding: 5px 10px; font-size: 12px; }
+body.compact #btn-undo { bottom: calc(80px + var(--safe-b)); padding: 7px 14px; }
+body.compact #edit-done { bottom: calc(8px + var(--safe-b)); padding: 8px 14px; }
+
+/* Selection panel: one low strip across the bottom; the corner buttons step aside while it is open */
+body.compact #panel {
+  left: max(10px, var(--safe-l)); right: max(10px, var(--safe-r)); width: auto; max-width: 860px; margin: 0 auto;
+  transform: none; bottom: calc(8px + var(--safe-b));
+  flex-direction: row; flex-wrap: wrap; gap: 6px 10px; padding: 7px 9px; border-radius: 10px;
+  animation-name: riseUp;
+}
+body.compact:has(#panel:not([hidden])) :is(#btn-build, #btn-battle, #btn-campaign, #btn-collect) { display: none !important; }
+body.compact .p-info { flex: 1 1 190px; gap: 4px; }
+body.compact .p-head { gap: 6px; padding-right: 24px; }
+body.compact .p-code { font-size: 10px; padding: 1px 4px; }
+body.compact .p-title { font-size: 14px; }
+body.compact .p-lvl { font-size: 11px; }
+body.compact .p-stats { gap: 3px; max-height: 44px; overflow-y: auto; }
+body.compact .p-stats::-webkit-scrollbar { display: none; }
+body.compact .chip { font-size: 11px; padding: 2px 6px; gap: 4px; }
+body.compact .chip b { font-size: 8px; }
+body.compact .p-grid { display: none; }
+body.compact .p-actions { flex: 0 1 auto; gap: 5px; margin-left: auto; justify-content: flex-end; }
+body.compact #panel .btn { min-height: 42px; min-width: 50px; padding: 3px 8px; border-radius: 8px; }
+body.compact #panel .btn-main { font-size: 12px; }
+body.compact #panel .btn-sub { font-size: 10px; gap: 1px 5px; flex-wrap: wrap; justify-content: center; max-width: 150px; }
+body.compact #panel .btn-sub.reason { max-width: 96px; }
+body.compact #panel .cost { gap: 2px; }
+body.compact #panel .cost .ico { width: 11px; height: 11px; }
+body.compact #panel .job { min-width: 120px; gap: 4px; }
+body.compact #panel .job-label { font-size: 11px; }
+body.compact #panel .job-bar { height: 6px; }
+body.compact .p-close { top: 2px; right: 3px; width: 26px; height: 26px; font-size: 20px; }
+
+/* Battle: left column (minimap, Rally, Launch, Speed) */
+body.compact #minimap { top: calc(48px + var(--safe-t)); width: 112px; height: 78px; border-radius: 8px; }
+body.compact #btn-speed, body.compact #btn-retreat { width: 56px; height: 46px; border-radius: 10px; font-size: 10px; }
+body.compact #btn-speed svg, body.compact #btn-retreat svg { width: 18px; height: 18px; }
+body.compact .nuke-btn, body.compact .rally-btn { width: 56px; height: 44px; border-radius: 10px; font-size: 9px; letter-spacing: 0.06em; }
+body.compact .nuke-btn { bottom: calc(60px + var(--safe-b)); }
+body.compact .rally-btn { bottom: calc(110px + var(--safe-b)); }
+body.compact:has(#btn-nuke[hidden]) .rally-btn { bottom: calc(60px + var(--safe-b)); }
+body.compact .nuke-btn svg, body.compact .rally-btn svg { width: 16px; height: 16px; }
+body.compact .nuke-btn .nk-cd, body.compact .rally-btn .rl-cd { font-size: 13px; }
+
+/* Battle: right column (abilities above Retreat) */
+body.compact #abilities { bottom: calc(60px + var(--safe-b)); gap: 6px; max-height: calc(100% - 112px - var(--safe-b) - var(--safe-t)); }
+body.compact .ab-btn { width: 54px; height: 44px; border-radius: 10px; font-size: 9px; gap: 1px; }
+body.compact .ab-btn svg { width: 18px; height: 18px; }
+body.compact .ab-btn .ab-cd { font-size: 16px; }
+
+/* Battle: status strip and troop bar along the bottom */
+body.compact #battle-hud { bottom: calc(8px + var(--safe-b)); gap: 5px; }
+body.compact .bh-wave { padding: 2px 8px; min-width: 50px; }
+body.compact .bh-wave span:last-child { font-size: 17px; }
+body.compact .bh-label { font-size: 8px; letter-spacing: 0.12em; }
+body.compact .bh-mid { padding: 4px 10px; gap: 3px; width: min(220px, 32vw); }
+body.compact .bh-hq .bar { height: 6px; }
+body.compact #bh-status { font-size: 11px; }
+body.compact #deploy-bar { bottom: calc(46px + var(--safe-b)); gap: 5px; padding: 3px; max-width: calc(100% - 2 * (max(10px, var(--safe-r)) + 126px)); }
+body.compact .dp { width: 42px; height: 42px; border-radius: 9px; }
+body.compact .dp.on { transform: translateY(-2px); }
+body.compact .dp-art { width: 26px; height: 26px; }
+body.compact .dp-n { font-size: 11px; right: 2px; }
+body.compact .dp-l { font-size: 9px; }
+body.compact .dp-cmd svg { width: 16px; height: 16px; }
+body.compact .dp-cd { font-size: 15px; border-radius: 9px; }
+body.compact .dp-item .dp-ico { width: 16px; height: 16px; }
+body.compact .dp-item .dp-ico svg { width: 15px; height: 15px; }
+
+/* Battle: messages */
+body.compact #next-wave { top: calc(48px + var(--safe-t)); gap: 6px; padding: 3px 4px 3px 9px; }
+body.compact .nw-label { font-size: 9px; }
+body.compact .nw-list { font-size: 11px; }
+body.compact #banner { top: 26%; padding-top: 5px; padding-bottom: 5px; }
+body.compact .bn-title { font-size: 22px; }
+body.compact .bn-sub { font-size: 12px; }
+body.compact #toasts { top: calc(48px + var(--safe-t)); gap: 4px; }
+body.compact .toast { padding: 5px 11px; font-size: 12px; }
+
+/* Dialogs: tighter margins so more content fits on a short screen */
+body.compact .overlay { padding: calc(6px + var(--safe-t)) max(8px, var(--safe-r)) calc(6px + var(--safe-b)) max(8px, var(--safe-l)); }
+body.compact .modal-box { padding: 11px 13px; border-radius: 12px; }
+body.compact .shop-box { border-radius: 12px; }
+body.compact .shop-head { gap: 10px; padding: 5px 6px 5px 12px; }
+body.compact .shop-head h2, body.compact .modal-box h2 { font-size: 17px; }
+body.compact .tab { padding: 6px 10px; font-size: 12px; }
+body.compact .hub-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 6px; margin: 8px 0 10px; }
+body.compact .hub { padding: 9px 10px; }
+body.compact .hub b { font-size: 13px; }
+body.compact .brief-cols { gap: 10px; margin: 8px 0; }
+body.compact .modal-box .btn, body.compact .shop-box .btn { min-height: 42px; }
+body.compact .cards-box { padding: 11px; }
+body.compact .cards-box h2 { margin-bottom: 8px; font-size: 18px; }
+body.compact .wcard { padding: 10px 8px; gap: 4px; }
+body.compact .wcard b { font-size: 14px; }
+/* Panel costs wrap to a second line instead of being cut off */
+#panel .btn-sub { flex-wrap: wrap; justify-content: center; row-gap: 1px; max-width: 180px; }

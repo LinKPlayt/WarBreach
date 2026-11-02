@@ -97,7 +97,7 @@ function legendsBattleStart() {
   const m = B.mission;
   if (!B.practice && !(m && m.challenge)) {
     B.lootMul *= (1 + kBonus('loot')) * (1 + streakBonus()) * (isWeekend() ? 1 + WEEKEND.loot : 1);
-    if (isWeekend()) setTimeout(() => { if (B && !B.over) banner('Weekend Blitz', '+25% loot and double wave medals'); }, 2800);
+    if (isWeekend()) { const b0 = B; setTimeout(() => { if (B === b0 && !B.over) banner('Weekend Blitz', '+25% loot and double wave medals'); }, 2800); }
   }
   B.morale = Math.min(100, (B.morale || 0) + kLevel('morale') * KNOWLEDGE.find(k => k.id === 'morale').per);
   if (B.crateT) B.crateT *= 1 - kBonus('crates');
@@ -657,6 +657,14 @@ const WHATS_NEW_5 = [
   ['Welcome-back report', 'See what your base did while you were away'],
   ['Air first targeting', 'A new targeting priority for your anti-air'],
 ];
+const WHATS_NEW_51 = [
+  ['Compact interface', 'Smaller bars and buttons on phones, clear of the notch, so you see more of the battlefield. Settings > Graphics > Interface size'],
+  ['Rally button', 'No longer stays on screen after a battle ends'],
+  ['Battle endings', 'A countdown from a battle you already left can no longer end your next one'],
+  ['Battle buttons', 'Speed, Launch, Rally, the minimap, abilities and the troop bar no longer overlap'],
+  ['Building panel', 'Costs wrap instead of being cut off, and the panel no longer covers the Campaign button'],
+  ['Boss Raid', 'The time-up message names the right boss'],
+];
 function maybeShowWhatsNew5() {
   if (S.seenUpdate5 === UPDATE5_VERSION) return false;
   const fresh = S.tut != null && S.tut < 99;
@@ -669,8 +677,11 @@ function maybeShowWhatsNew5() {
 function openWhatsNew5(back) {
   openModal(`
     <div class="settings">
-      <div class="m-head"><div><span class="stamp">Update ${UPDATE5_VERSION}</span><h2>Legends</h2></div></div>
+      <div class="m-head"><div><span class="stamp">Update ${PATCH5_VERSION}</span><h2>Legends</h2></div></div>
       <p class="lead">Find the Gauntlet, Challenge Editor, Knowledge and Field Album in the Operations hub (compass) and the menu.</p>
+      <div class="chap">${PATCH5_VERSION}: phone interface and fixes</div>
+      <ul class="whats-new">${WHATS_NEW_51.map(([a, b]) => `<li><b>${a}</b><span>${b}</span></li>`).join('')}</ul>
+      <div class="chap">${UPDATE5_VERSION}: Legends</div>
       <ul class="whats-new">${WHATS_NEW_5.map(([a, b]) => `<li><b>${a}</b><span>${b}</span></li>`).join('')}</ul>
       <div class="settings-row"><button class="btn ghost" id="btn-older5">Older updates</button><button class="btn" data-close>To the front</button></div>
     </div>`, back || null);

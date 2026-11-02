@@ -167,7 +167,7 @@ function leaveBattle() {
   for (const b of S.buildings) { delete b._hp; delete b._maxhp; delete b._dead; delete b._cd; delete b._tgt; delete b._heal; delete b._beamOn; b._flash = 0; }
   B = null;
   $('#cards').hidden = true;
-  updateNukeButton(true);
+  updateNukeButton(true); updateRallyButton(true); updateMinimap();
   document.body.classList.remove('in-battle', 'hq-danger', 'targeting', 'no-airstrike', 'deploying');
   $('#banner').hidden = true;
   rebuildGrid();
@@ -331,11 +331,11 @@ function waveCleared() {
   if (!B.mission) B.battleStars += n >= 10 ? 2 : 1;
   orderEvent('waves', 1);
   eventTokens(B.mission ? 1 : 2);
-  if (!B.mission && n % 5 === 0) setTimeout(() => { if (B && !B.over) offerWaveCards(); }, 1200);
+  if (!B.mission && n % 5 === 0) { const b0 = B; setTimeout(() => { if (B === b0 && !B.over) offerWaveCards(); }, 1200); }
   if (B.mission) {
     B.waves = n;
     addXP(15 * n);
-    if (n >= B.mission.waves.length) { B.phase = 'won'; save(); setTimeout(() => endBattle('victory'), 900); banner('Mission complete', B.mission.name); Sound.play('win'); return; }
+    if (n >= B.mission.waves.length) { B.phase = 'won'; save(); const b0 = B; setTimeout(() => { if (B === b0) endBattle('victory'); }, 900); banner('Mission complete', B.mission.name); Sound.play('win'); return; }
     B.phase = 'break'; B.breakT = 6;
     banner(`Wave ${n} cleared`, `${B.mission.waves.length - n} to go`);
     Sound.play('medal'); save();
@@ -540,7 +540,7 @@ function damageBuilding(b, dmg, attacker) {
     Sound.play(b.type === 'wall' ? 'boom' : 'bigboom');
     if (b.type !== 'wall') buzz(60);
     B.flowDirty = true;
-    if (b.type === 'hq') { buzz([200, 80, 300]); banner('Command Center destroyed', ''); setTimeout(() => endBattle('defeat'), 1400); B.phase = 'lost'; }
+    if (b.type === 'hq') { buzz([200, 80, 300]); banner('Command Center destroyed', ''); const b0 = B; setTimeout(() => { if (B === b0) endBattle('defeat'); }, 1400); B.phase = 'lost'; }
   }
 }
 

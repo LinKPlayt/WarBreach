@@ -942,6 +942,7 @@ function frame(now) {
     draw();
     perfSample(performance.now() - d0, dt);
     updateMinimap();
+    updateRallyButton();
     updateHUD();
     updateBattleHUD();
     Music.setMode(B ? 'battle' : 'base');
