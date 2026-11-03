@@ -118,7 +118,8 @@ function renderDataTab(el, back) {
   el.innerHTML = `
     <div class="set-row"><div class="set-label"><b>Backup and restore</b><span>Copy a save code to move your base to another device.</span></div><button class="btn ghost" data-sd="backup">Open</button></div>
     <div class="set-row"><div class="set-label"><b>Save file</b><span>Saved automatically on this device · ${(bytes / 1024).toFixed(1)} KB</span></div><button class="btn ghost" data-sd="save">Save now</button></div>
-    <div class="set-row"><div class="set-label"><b>Tutorial</b><span>Show the first-time hints again.</span></div><button class="btn ghost" data-sd="tut">Replay</button></div>
+    <div class="set-row"><div class="set-label"><b>Tutorial</b><span>Sergeant Vance walks you through the basics again.</span></div><button class="btn ghost" data-sd="tut">Replay</button></div>
+    <div class="set-row"><div class="set-label"><b>Intro</b><span>Watch the opening again.</span></div><button class="btn ghost" data-sd="intro">Watch</button></div>
     <div class="set-row"><div class="set-label"><b>What's new</b><span>Fixes in ${PATCH_VERSION} and everything from ${UPDATE3_VERSION}.</span></div><button class="btn ghost" data-sd="news">Show</button></div>
     <div class="set-row danger-row"><div class="set-label"><b>Reset base</b><span>Erases everything and starts over. This cannot be undone.</span></div><button class="btn danger-outline" data-sd="reset">Reset</button></div>`;
   el.querySelectorAll('[data-sd]').forEach(b => b.addEventListener('click', () => {
@@ -126,7 +127,8 @@ function renderDataTab(el, back) {
     Sound.play('click');
     if (k === 'backup') { openBackup(); modalOnClose = () => openSettings(back, 'data'); }
     else if (k === 'save') { save(); toast('Game saved', 'good'); renderDataTab(el, back); }
-    else if (k === 'tut') { if (B) { toast('Finish the battle first', 'bad'); return; } S.tut = 0; save(); toast('Tutorial hints are back', 'info'); }
+    else if (k === 'tut') { if (B) { toast('Finish the battle first', 'bad'); return; } modalOnClose = null; closeModal(); S.introSeen = true; tutGo(0); }
+    else if (k === 'intro') { if (B) { toast('Finish the battle first', 'bad'); return; } modalOnClose = null; closeModal(); playIntro({ replay: true }); }
     else if (k === 'news') { openWhatsNew5(() => openSettings(back, 'data')); }
     else if (k === 'reset') {
       if (B) { toast('Finish the battle first', 'bad'); return; }
@@ -134,6 +136,7 @@ function renderDataTab(el, back) {
         S = newBase(); applySettings(); rebuildGrid(); select(null); save(); recenter(); modalOnClose = null; closeModal();
         ground = buildGroundCanvas(1.5, S.theme);
         toast('New base established', 'good');
+        setTimeout(() => { if (!S.introSeen && !B) playIntro(); }, 400);
       } else { b.dataset.armed = '1'; b.textContent = 'Tap again to erase'; }
     }
   }));

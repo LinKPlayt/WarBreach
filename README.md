@@ -185,6 +185,17 @@ Every 5.0 feature has a logic test (79 checks), and the 4.0 suite, battle soak, 
 
 New automated checks cover this: a teardown audit that ends battles 13 different ways and compares the base screen before and after, and a layout audit at six iPhone and iPad sizes (notch and home bar included) that checks for overlaps, controls under the notch, clipped text and controls that cannot be tapped.
 
+## New-player intro and tutorial
+
+A new player's first launch opens with a short intro: the camera sweeps in from the west road over the outpost, the title lands, and Sgt. Vance, the field advisor, gives a three-line briefing and asks you to name your outpost. Every part can be skipped.
+
+Then Sgt. Vance runs an 18-step guided tutorial with a spotlight on what to tap: look around, collect gold, build a second Machine Gun Nest, upgrade the Command Center, meet the builders, start the first battle, move the hero, call an airstrike, clear the wave, learn about retreating, and find the Campaign. Each step finishes when you actually do it, and finishing pays 600 gold, 400 steel and 20 medals.
+
+- The advisor card never covers what it points at; on small phones it moves beside the target.
+- It never blocks the screen: you can do anything at any time. Starting a battle early jumps ahead to the battle steps; closing the shop, cancelling a placement or closing the briefing steps back; steps that cannot be done (no gun slots left, the Command Center already upgrading) are skipped; if you are short on resources, Command sends a supply drop.
+- Skip it any time (two taps), and replay the tutorial or the intro from **Settings > Data**.
+- Returning players never see it. Players who were part-way through the old four hints get the new tutorial without the intro.
+
 ## Code layout
 
 - `js/data.js` – building stats, costs, limits per HQ level, wave previews
@@ -203,6 +214,7 @@ New automated checks cover this: a teardown audit that ends battles 13 different
 - `js/basecamp.js` – Update 3.0 base systems: photo mode, coverage view, build queue, cargo drones, living base, new building art
 - `js/settings.js` – main menu and the tabbed Settings screen
 - `js/warlords.js` – Update 4.0: weather, morale, Sentry Gun, Drone Hangar, new enemies, Maj. Kade, Shield Trooper, checkpoints, forecast, Vault, Trading Post, mastery, leagues, gear upgrades, share codes, Intel feed, undo-sell
+- `js/tutorial.js` – the first-launch intro and the guided tutorial (Sgt. Vance)
 - `js/legends.js` – Update 5.0: the Gauntlet, Paragons, Challenge Editor, Commander Knowledge, Vengeance Tower, Decoy Beacon, army presets, Field Album, win streaks, Weekend Blitz, welcome-back report
 - `js/game.js` – state, saving, placement, input, HUD and main loop
 - `style.css` – HUD, panels, shop and modals

@@ -109,6 +109,7 @@ function fireTargeted(k, w) {
   $('#banner').hidden = true;
   if (jammedAt(w.x, w.y)) { toast('Signal jammed. Destroy the Jammer Truck first', 'bad'); Sound.play('error'); return; }
   orderEvent('ability', 1);
+  tutorialEvent('ability');
   B.ab[k] = abilityCooldown(k);
   if (k === 'airstrike') callAirstrike(w);
   else if (k === 'artillery') callArtillery(w);

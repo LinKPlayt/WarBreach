@@ -62,6 +62,9 @@ function migrate(s) {
   if (!s.stance) s.stance = 'hold';
   if (s.settings && s.settings.lowfx == null) s.settings.lowfx = false;
   if (s.tut == null) s.tut = (s.bestWave > 0 || s.buildings.length > 6) ? 99 : 0;
+  if (s.introSeen == null) s.introSeen = s.tut > 0;
+  if (s.tutV !== 2) { if (s.tut > 0 && s.tut < 99) s.tut = 0; s.tutV = 2; } // the old 4-hint tutorial restarts as the new one
+  if (s.tut >= 99) s.introSeen = true; // only players who already started can have finished or skipped the tutorial
   // Update 3.0
   if (!Array.isArray(s.hof)) s.hof = [];
   if (!s.records) s.records = {};
@@ -320,6 +323,7 @@ function upgrade(b) {
   pay(st.cost);
   startJob(b, st.to);
   Sound.play('build');
+  tutorialEvent('upgrade:' + b.type);
   if (!b.job) {
     const c = centerOf(b);
     burst(c.x, c.y, '#f2b632', 10);
@@ -392,6 +396,7 @@ function collect(b, silent) {
   floaters.push({ x: c.x, y: c.y - 30, text: `+${fmt(amt)}`, color: kind === 'gold' ? '#f5c542' : kind === 'oil' ? '#9aa3b5' : '#c4d3e0', life: 1.2, max: 1.2 });
   for (let i = 0; i < 8; i++) particles.push({ x: c.x, y: c.y - 20, vx: (Math.random() - 0.5) * 120, vy: -60 - Math.random() * 90, g: 260, life: 0.7, max: 0.7, r: 3, color: kind === 'gold' ? '#f5c542' : '#a9b6c1' });
   pulseRes(kind);
+  tutorialEvent('collect');
   return amt;
 }
 
@@ -406,6 +411,7 @@ function startPlacing(type) {
   placing = { type, x: spot.x, y: spot.y, moveId: null, valid: false };
   select(null);
   updatePlacing();
+  tutorialEvent('place');
 }
 
 function startMove(b) {
@@ -449,7 +455,7 @@ function confirmPlace() {
   if (!st.ok) { toast(st.reason, 'bad'); placing = null; showPlaceCtrl(false); return; }
   pay(st.cost);
   Sound.play('build');
-  tutorialEvent('build');
+  tutorialEvent('built');
   S.stats.built = (S.stats.built || 0) + 1;
   const b = { id: S.nextId++, type, x: placing.x, y: placing.y, level: 0, job: null, stored: 0, baseAngle: Math.random() * Math.PI * 2 };
   S.buildings.push(b);
@@ -1256,6 +1262,7 @@ function openShop() {
   select(null);
   renderShop();
   shop.hidden = false;
+  tutorialEvent('shop');
 }
 function closeShop() { shop.hidden = true; }
 
@@ -1730,41 +1737,7 @@ function openRecord() {
     </div>`);
 }
 
-/* ---------------- First-time tutorial ---------------- */
-const TUTORIAL = [
-  { target: '#btn-collect', text: 'Your mines have been busy. Tap to collect everything.', on: 'collect' },
-  { target: '#btn-build', text: 'Open Build and place a second Machine Gun Nest.', on: 'build' },
-  { target: '#btn-battle', text: 'Ready? Start a battle. Tap the map to move your hero.', on: 'battle' },
-  { target: '#btn-campaign', text: 'Campaign missions pay big rewards. Take a look.', on: 'campaign' },
-];
-function tutorialEvent(ev) {
-  if (S.tut == null || S.tut >= TUTORIAL.length) return;
-  if (TUTORIAL[S.tut].on === ev) { S.tut++; if (S.tut >= TUTORIAL.length) S.tut = 99; save(); }
-}
-let tutEl = null, tutTarget = null;
-function updateTutorial() {
-  const step = S.tut != null && S.tut < TUTORIAL.length ? TUTORIAL[S.tut] : null;
-  const tgt = step && !B && modal.hidden && shop.hidden && !placing && !selectedId ? document.querySelector(step.target) : null;
-  const visible = tgt && !tgt.hidden && tgt.offsetParent !== null;
-  if (tutTarget && tutTarget !== tgt) tutTarget.classList.remove('tut-pulse');
-  if (!tutEl) tutEl = $('#tut');
-  if (!visible) {
-    // skip the collect step when there is nothing to collect
-    if (step && step.on === 'collect' && !S.buildings.some(hasBubble) && !B) { S.tut++; save(); }
-    tutEl.hidden = true; tutTarget = null; return;
-  }
-  tutTarget = tgt;
-  tgt.classList.add('tut-pulse');
-  if (tutEl.dataset.step !== String(S.tut)) { tutEl.dataset.step = String(S.tut); tutEl.querySelector('.tut-text').textContent = step.text; }
-  tutEl.hidden = false;
-  const r = tgt.getBoundingClientRect(), w = tutEl.offsetWidth, h = tutEl.offsetHeight;
-  const x = clamp(r.left + r.width / 2 - w / 2, 8, vw - w - 8);
-  const above = r.top - h - 14 > 50;
-  const y = above ? r.top - h - 12 : r.bottom + 12;
-  tutEl.style.transform = `translate(${x | 0}px, ${y | 0}px)`;
-  tutEl.classList.toggle('below', !above);
-  tutEl.style.setProperty('--ax', `${clamp(r.left + r.width / 2 - x, 16, w - 16) | 0}px`);
-}
+/* First-time intro and tutorial: see tutorial.js */
 
 /* ---------------- Boot ---------------- */
 
@@ -1807,6 +1780,7 @@ function start(hotData) {
   Music.start();
   setTimeout(() => { const sp = document.getElementById('splash'); if (sp) { sp.classList.add('out'); setTimeout(() => sp.remove(), 700); } }, 900);
   setTimeout(() => { if (!B && loginClaimable() && S.tut >= 99 && modal.hidden) openLogin(); }, 1500);
+  setTimeout(() => { if (!S.introSeen && S.tut < 99 && !B) playIntro(); }, 950);
   resize();
   recenter();
   initSprites();
@@ -1818,7 +1792,6 @@ function start(hotData) {
   document.addEventListener('visibilitychange', () => { if (document.hidden) save(); });
   window.addEventListener('pagehide', save);
   window.claude?.hot?.snapshot?.(() => ({ save: serialize() }));
-  if (!saved) setTimeout(() => toast('Welcome, Commander. Outpost Bravo is yours to defend', 'info'), 600);
   requestAnimationFrame(t => { lastFrame = t; frame(t); });
 }
 

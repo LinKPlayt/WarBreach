@@ -55,7 +55,7 @@ function startBattle(mission) {
   warBattleStart();
   legendsBattleStart();
   S.stats.battles = (S.stats.battles || 0) + 1;
-  if (S.tut != null && S.tut < 9) tutorialEvent('battle');
+  tutorialEvent('battle');
   S.battles = (S.battles || 0) + 1;
   document.body.classList.add('in-battle');
   setSpeedLabel();
@@ -326,6 +326,7 @@ function spawnEnemy(type) {
 
 function waveCleared() {
   const n = B.wave;
+  tutorialEvent('wave');
   if (B.hero) addHeroXP(B.hero.id, 10 + n * 2);
   S.stats.wavesCleared = (S.stats.wavesCleared || 0) + 1;
   if (!B.mission) B.battleStars += n >= 10 ? 2 : 1;
@@ -1008,6 +1009,7 @@ function battleTap(w) {
   if (B.hero && !B.hero.dead) {
     B.hero.dest = { x: clamp(w.x, TILE, (MAP_W - 1) * TILE), y: clamp(w.y, TILE, (MAP_H - 1) * TILE) };
     Sound.play('click');
+    tutorialEvent('hero');
   }
 }
 

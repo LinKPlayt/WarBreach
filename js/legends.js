@@ -658,6 +658,7 @@ const WHATS_NEW_5 = [
   ['Air first targeting', 'A new targeting priority for your anti-air'],
 ];
 const WHATS_NEW_55 = [
+  ['Intro and tutorial', 'New commanders get an opening briefing and a guided tutorial from Sgt. Vance. Replay either from Settings > Data'],
   ['Compact interface', 'Smaller bars and buttons on phones, clear of the notch, so you see more of the battlefield. Settings > Graphics > Interface size'],
   ['Rally button', 'No longer stays on screen after a battle ends'],
   ['Battle endings', 'A countdown from a battle you already left can no longer end your next one'],
