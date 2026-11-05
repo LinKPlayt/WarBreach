@@ -196,9 +196,11 @@ Then Sgt. Vance runs an 18-step guided tutorial with a spotlight on what to tap:
 - Skip it any time (two taps), and replay the tutorial or the intro from **Settings > Data**.
 - Returning players never see it. Players who were part-way through the old four hints get the new tutorial without the intro.
 
-## Balance and bug-fix pass
+## Update 5.6: bigger base and balance
 
 Found by simulating endless waves at every Command Center level, all 18 campaign missions and full Gauntlet runs, plus random UI testing.
+
+**Bigger base:** the build area grew from 28 x 18 (504 tiles) to 38 x 26 (988 tiles) on a 46 x 34 map. From Command Center 9 up, the buildings and walls you may own no longer fit in the old area (at Command Center 12 they need 745 tiles); now a full Command Center 12 base fits with about a quarter of the ground free for paths. Existing bases, obstacles, the supply crate and saved layouts move to the middle of the new ground automatically, and base codes made before 5.6 still import in the right place.
 
 **Fixes:**
 - Waves could stay open forever: enemies parked just outside the reach of every defense and shelled an outlying building that a Repair Bay kept healing (Artillery Trucks and Stealth Commandos did the same from range). At Command Center 6–8 most waves stalled this way. Now, once a wave has nothing left to send, 30 seconds with no kill and no building destroyed make the remaining attackers charge the Command Center, and anything still alive after 2 more minutes without progress pulls back.
@@ -210,7 +212,7 @@ Found by simulating endless waves at every Command Center level, all 18 campaign
 - Steel Foundry: 20 → 26 steel per minute (storage raised to match). Upgrading everything took 1.5–2.4x as long in steel as in gold.
 - Oil Derrick: 8 → 12 oil per minute (storage raised to match). Levels 9+ took up to 2.2x as long in oil as in gold.
 
-**Tests:** `node tests/logic.test.js` runs 18 checks in a headless browser (needs Playwright): stalled waves end, kills reset the timer, waves keep moving at Command Center 3, 6 and 9, offline boosts, Gauntlet scaling, storage versus upgrade costs, resource pacing and the campaign curve.
+**Tests:** `node tests/logic.test.js` runs its checks in a headless browser (needs Playwright): stalled waves end, kills reset the timer, waves keep moving at Command Center 3, 6 and 9, offline boosts, Gauntlet scaling, storage versus upgrade costs, resource pacing, the campaign curve, every building fitting at every Command Center level, and moving old saves and base codes onto the bigger map.
 
 ## Code layout
 

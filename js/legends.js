@@ -666,11 +666,19 @@ const WHATS_NEW_55 = [
   ['Building panel', 'Costs wrap instead of being cut off, and the panel no longer covers the Campaign button'],
   ['Boss Raid', 'The time-up message names the right boss'],
 ];
-// Shows once per update: for 5.0 itself, and again for 5.5 to players who already saw 5.0.
+const WHATS_NEW_56 = [
+  ['Bigger base', 'The build area is almost twice as big (38 x 26 tiles), so every building and wall up to Command Center 12 fits. Your base moved to the middle of the new ground'],
+  ['No more endless waves', 'Attackers that park out of reach now charge the Command Center after 30 seconds without progress, and pull back if they still get nowhere'],
+  ['Gauntlet', 'Gentler early stages, so a Command Center 5 base can reach the Warlord'],
+  ['Total War', 'Campaign mission 11 is no longer a big jump over mission 10'],
+  ['Steel and oil', 'Steel Foundries make 30% more and Oil Derricks 50% more, so they keep up with gold'],
+  ['Overtime Shift', 'Keeps doubling production while the game is closed'],
+];
+// Shows once per update: for 5.0 itself, and again for 5.5 and 5.6 to players who already saw 5.0.
 function maybeShowWhatsNew5() {
-  if (S.seenUpdate5 === UPDATE5_VERSION && S.seenUpdate55 === UPDATE55_VERSION) return false;
+  if (S.seenUpdate5 === UPDATE5_VERSION && S.seenUpdate55 === UPDATE55_VERSION && S.seenUpdate56 === UPDATE56_VERSION) return false;
   const fresh = S.tut != null && S.tut < 99;
-  Object.assign(S, { seenUpdate55: UPDATE55_VERSION, seenUpdate5: UPDATE5_VERSION, seenUpdate4: UPDATE4_VERSION, seenUpdate3: UPDATE3_VERSION, seenPatch: PATCH_VERSION, seenUpdate2: UPDATE2_VERSION, seenUpdate: UPDATE_VERSION });
+  Object.assign(S, { seenUpdate56: UPDATE56_VERSION, seenUpdate55: UPDATE55_VERSION, seenUpdate5: UPDATE5_VERSION, seenUpdate4: UPDATE4_VERSION, seenUpdate3: UPDATE3_VERSION, seenPatch: PATCH_VERSION, seenUpdate2: UPDATE2_VERSION, seenUpdate: UPDATE_VERSION });
   save();
   if (fresh) return false;
   openWhatsNew5();
@@ -679,8 +687,10 @@ function maybeShowWhatsNew5() {
 function openWhatsNew5(back) {
   openModal(`
     <div class="settings">
-      <div class="m-head"><div><span class="stamp">Update ${UPDATE55_VERSION}</span><h2>Legends</h2></div></div>
+      <div class="m-head"><div><span class="stamp">Update ${UPDATE56_VERSION}</span><h2>Legends</h2></div></div>
       <p class="lead">Find the Gauntlet, Challenge Editor, Knowledge and Field Album in the Operations hub (compass) and the menu.</p>
+      <div class="chap">${UPDATE56_VERSION}: bigger base and balance</div>
+      <ul class="whats-new">${WHATS_NEW_56.map(([a, b]) => `<li><b>${a}</b><span>${b}</span></li>`).join('')}</ul>
       <div class="chap">${UPDATE55_VERSION}: phone interface and fixes</div>
       <ul class="whats-new">${WHATS_NEW_55.map(([a, b]) => `<li><b>${a}</b><span>${b}</span></li>`).join('')}</ul>
       <div class="chap">${UPDATE5_VERSION}: Legends</div>

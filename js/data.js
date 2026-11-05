@@ -2,9 +2,13 @@
 'use strict';
 
 const TILE = 40;            // world pixels per grid tile
-const MAP_W = 36;           // total map width in tiles
-const MAP_H = 26;           // total map height in tiles
+// The build area is 38 x 26 = 988 tiles: every building and wall a Command Center 12 base may own
+// (745 tiles) fits with room left for paths. Until map version 2 it was 28 x 18 = 504 tiles.
+const MAP_W = 46;           // total map width in tiles
+const MAP_H = 34;           // total map height in tiles
 const BORDER = 4;           // non-buildable wilderness around the compound
+const MAP_V = 2;            // map version stored in saves
+const MAP_SHIFT_V1 = { x: 5, y: 4 }; // moves a base laid out on the old 36 x 26 map to the middle of this one
 const START_BUILDERS = 2;   // simultaneous construction jobs at the start
 const MAX_BUILDERS = 4;
 const BUILDER_COST = [0, 0, 0, 25, 60]; // medals to hire builder #3 and #4
@@ -1226,6 +1230,7 @@ ACHIEVEMENTS.push(
 /* =================== Update 5.0: Legends =================== */
 const UPDATE5_VERSION = '5.0';
 const UPDATE55_VERSION = '5.5';
+const UPDATE56_VERSION = '5.6';
 
 Object.assign(DEFS, {
   vengeance: {

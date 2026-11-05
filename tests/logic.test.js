@@ -177,6 +177,62 @@ function check(name, ok, detail) { results.push({ name, ok: !!ok, detail }); con
   const camp = await page.evaluate(() => Object.fromEntries(CAMPAIGN.map(m => [m.id, m.level])));
   check('Total War is between Long Guns and Last Stand', camp.m11 > camp.m10 && camp.m11 <= (camp.m10 + camp.m12) / 2 + 2, `m10 ${camp.m10}, m11 ${camp.m11}, m12 ${camp.m12}`);
 
+  // 8. Every building and wall a Command Center may own fits in the build area, at every level.
+  const fit = await page.evaluate(() => {
+    const out = [];
+    let area = 0;
+    for (let y = 0; y < MAP_H; y++) for (let x = 0; x < MAP_W; x++) if (inBuildArea(x, y)) area++;
+    for (let L = 1; L <= MAX_HQ; L++) {
+      S = newBase(); S.obstacles = []; S.buildings = S.buildings.filter(b => b.type === 'hq'); S.buildings[0].level = L; rebuildGrid();
+      const h = S.buildings[0];
+      const types = Object.keys(LIMITS).filter(t => t !== 'hq' && !DEFS[t].deco && !DEFS[t].decoy && LIMITS[t][L] > 0).sort((a, b) => DEFS[b].size - DEFS[a].size);
+      let need = 9, missing = 0;
+      for (const t of types) for (let i = 0; i < LIMITS[t][L]; i++) {
+        const n = DEFS[t].size; need += n * n;
+        const sp = nearestFree(t, h.x + 1 - Math.floor(n / 2), h.y + 1 - Math.floor(n / 2));
+        if (!sp) { missing++; continue; }
+        S.buildings.push({ id: S.nextId++, type: t, x: sp.x, y: sp.y, level: 1, job: null, stored: 0, baseAngle: 0 }); rebuildGrid();
+      }
+      out.push({ L, need, missing, room: Math.round((1 - need / area) * 100) });
+    }
+    return { area, out };
+  });
+  const worst = fit.out.reduce((a, r) => (r.room < a.room ? r : a));
+  check('every building and wall fits at every Command Center level', fit.out.every(r => !r.missing), fit.out.filter(r => r.missing).map(r => `HQ${r.L}: ${r.missing} left over`).join(', ') || `${fit.area} tiles`);
+  check('a full Command Center 12 base leaves at least 20% of the area free', worst.room >= 20, `HQ${worst.L} needs ${worst.need} of ${fit.area}, ${worst.room}% free`);
+
+  // 9. Saves from the smaller map (and old share codes) move to the middle of the new one.
+  const mig = await page.evaluate(() => {
+    const old = { v: 1, name: 'Old', gold: 100, steel: 100, nextId: 4, bestWave: 3, saved: Date.now(),
+      buildings: [{ id: 1, type: 'hq', x: 16, y: 12, level: 3, job: null, stored: 0 }, { id: 2, type: 'mg', x: 12, y: 15, level: 2, job: null, stored: 0 }, { id: 3, type: 'wall', x: 4, y: 4, level: 1, job: null, stored: 0 }],
+      obstacles: [{ id: 1, x: 30, y: 20, kind: 'rock' }], drop: { x: 10, y: 10 }, layouts: [{ name: 'Layout 1', saved: 1, pos: { 1: [16, 12], 2: [12, 15] } }] };
+    const s = load(JSON.stringify(old));
+    const again = load(JSON.stringify(s)); // migrating twice must not move anything again
+    const hqOld = s.buildings.find(b => b.type === 'hq');
+    // an old share code: positions from the 36 x 26 map
+    S = newBase(); S.obstacles = []; rebuildGrid();
+    const oldCode = SHARE_PREFIX + btoa(JSON.stringify({ v: 1, b: S.buildings.map(b => [b.type, b.x - MAP_SHIFT_V1.x, b.y - MAP_SHIFT_V1.y]) }));
+    const before = S.buildings.map(b => [b.x, b.y]).join(';');
+    const r1 = importLayoutCode(oldCode);
+    const after1 = S.buildings.map(b => [b.x, b.y]).join(';');
+    const r2 = importLayoutCode(exportLayoutCode());
+    const after2 = S.buildings.map(b => [b.x, b.y]).join(';');
+    const fresh = newBase(), fh = fresh.buildings.find(b => b.type === 'hq');
+    return {
+      hq: [hqOld.x, hqOld.y], hqTwice: [again.buildings[0].x, again.buildings[0].y], mapV: s.mapV,
+      wallIn: inBuildArea(s.buildings[2].x, s.buildings[2].y), obs: [s.obstacles[0].x, s.obstacles[0].y], drop: [s.drop.x, s.drop.y], layout: s.layouts[0].pos[1],
+      codeOld: r1.ok && after1 === before, codeNew: r2.ok && after2 === before,
+      freshHq: [fh.x, fh.y], center: [(MAP_W - 3) / 2, (MAP_H - 3) / 2],
+    };
+  });
+  check('an old save is moved to the middle of the new map', mig.hq[0] === 21 && mig.hq[1] === 16 && mig.mapV === 2, `HQ at ${mig.hq}`);
+  check('loading a migrated save again does not move it twice', mig.hqTwice.join() === mig.hq.join());
+  check('obstacles, the supply crate and saved layouts move with the base', mig.obs.join() === '35,24' && mig.drop.join() === '15,14' && mig.layout.join() === '21,16', `${mig.obs} / ${mig.drop} / ${mig.layout}`);
+  check('buildings from an old save stay inside the build area', mig.wallIn);
+  check('old share codes land where they did on the old map', mig.codeOld);
+  check('new share codes round-trip', mig.codeNew);
+  check('a new base starts in the middle of the map', Math.abs(mig.freshHq[0] - mig.center[0]) <= 1 && Math.abs(mig.freshHq[1] - mig.center[1]) <= 1, `HQ ${mig.freshHq}, middle ${mig.center}`);
+
   check('no page errors', !errors.length, errors.slice(0, 3).join(' | '));
   await browser.close(); srv.close();
   const failed = results.filter(r => !r.ok).length;

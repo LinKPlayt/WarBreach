@@ -15,7 +15,7 @@ let sellArmed = false;
 let paragonArmed = false; // Paragon merges take two taps, like selling
 
 function newBase() {
-  const s = { v: 1, name: 'Outpost Bravo', gold: 750, steel: 600, nextId: 1, buildings: [], bestWave: 0, saved: Date.now() };
+  const s = { v: 1, mapV: MAP_V, name: 'Outpost Bravo', gold: 750, steel: 600, nextId: 1, buildings: [], bestWave: 0, saved: Date.now() };
   const add = (type, x, y, level = 1) => {
     s.buildings.push({ id: s.nextId++, type, x, y, level, job: null, stored: 0, baseAngle: Math.random() * Math.PI * 2 });
   };
@@ -32,6 +32,7 @@ function newBase() {
 
 // Fill in fields added after the first release so older saves keep working.
 function migrate(s) {
+  if (s.mapV !== MAP_V) shiftToMapV2(s);
   if (s.medals == null) s.medals = 10;
   if (s.xp == null) s.xp = 0;
   if (s.builders == null) s.builders = START_BUILDERS;
@@ -97,6 +98,21 @@ function migrate(s) {
   if (s.gauntlet && s.gauntlet.active && !(Number.isInteger(s.gauntlet.stage) && Array.isArray(s.gauntlet.arts))) s.gauntlet = { active: false };
   if (!s.winStreak) s.winStreak = { n: 0, best: 0 };
   return s;
+}
+
+// Map version 2 made the map bigger on every side: move an older base (and everything stored
+// with tile positions) so it sits in the middle of the new build area.
+function shiftToMapV2(s) {
+  const { x: dx, y: dy } = MAP_SHIFT_V1;
+  const move = p => { if (p && Number.isFinite(p.x) && Number.isFinite(p.y)) { p.x += dx; p.y += dy; } };
+  for (const b of s.buildings || []) move(b);
+  for (const o of Array.isArray(s.obstacles) ? s.obstacles : []) move(o);
+  move(s.drop);
+  for (const L of Array.isArray(s.layouts) ? s.layouts : []) {
+    if (!L || !L.pos) continue;
+    for (const id of Object.keys(L.pos)) { const p = L.pos[id]; if (Array.isArray(p)) L.pos[id] = [p[0] + dx, p[1] + dy]; }
+  }
+  s.mapV = MAP_V;
 }
 
 function serialize() {

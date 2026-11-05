@@ -67,7 +67,7 @@ function openSettings(back, tab) {
     <div class="settings set-wrap">
       <div class="m-head set-head"><h2>Settings</h2><div class="tabs set-tabs">${SET_TABS.map(([id, name]) => `<button class="tab ${id === setTab ? 'on' : ''}" data-st="${id}">${name}</button>`).join('')}</div></div>
       <div class="set-body" id="set-body"></div>
-      <div class="settings-row set-foot"><span class="set-ver">WarBreach ${UPDATE55_VERSION} · Legends</span><button class="btn" data-close>Done</button></div>
+      <div class="settings-row set-foot"><span class="set-ver">WarBreach ${UPDATE56_VERSION} · Legends</span><button class="btn" data-close>Done</button></div>
     </div>`, back || null);
   const body = $('#modal-body');
   body.querySelectorAll('[data-st]').forEach(t => t.addEventListener('click', () => {
@@ -163,7 +163,7 @@ function openMenu() {
     { id: 'ach', name: 'Achievements', sub: `${achClaimable()} to claim`, dot: achClaimable() > 0, fn: () => { openAchievements(); modalOnClose = openMenu; } },
     { id: 'wardrobe', name: 'Wardrobe', sub: 'Skins, flags and camo', fn: openWardrobe },
     { id: 'layouts', name: 'Layouts', sub: 'Save and edit your base', fn: openLayouts },
-    { id: 'news', name: "What's new", sub: `Update ${UPDATE55_VERSION}`, fn: () => openWhatsNew5(openMenu) },
+    { id: 'news', name: "What's new", sub: `Update ${UPDATE56_VERSION}`, fn: () => openWhatsNew5(openMenu) },
     { id: 'fs', name: 'Fullscreen', sub: 'Hide the browser bars', fn: () => { closeModal(); toggleFullscreen(); } },
   ];
   openModal(`

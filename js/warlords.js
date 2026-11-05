@@ -636,7 +636,7 @@ function decorateGear(id) {
 
 /* ================= Layout share codes ================= */
 function exportLayoutCode() {
-  return SHARE_PREFIX + btoa(JSON.stringify({ v: 1, b: S.buildings.map(b => [b.type, b.x, b.y]) }));
+  return SHARE_PREFIX + btoa(JSON.stringify({ v: MAP_V, b: S.buildings.map(b => [b.type, b.x, b.y]) }));
 }
 function importLayoutCode(code) {
   code = String(code || '').trim();
@@ -645,7 +645,9 @@ function importLayoutCode(code) {
   try { data = JSON.parse(atob(code.slice(SHARE_PREFIX.length))); } catch (e) { return { ok: false, reason: 'The code is damaged' }; }
   if (!data || !Array.isArray(data.b)) return { ok: false, reason: 'The code is damaged' };
   const pool = {};
-  for (const e of data.b) if (Array.isArray(e) && DEFS[e[0]] && Number.isInteger(e[1]) && Number.isInteger(e[2])) (pool[e[0]] = pool[e[0]] || []).push([e[1], e[2]]);
+  // codes made before map version 2 come from the smaller map: move them to its middle
+  const sh = data.v === MAP_V ? { x: 0, y: 0 } : MAP_SHIFT_V1;
+  for (const e of data.b) if (Array.isArray(e) && DEFS[e[0]] && Number.isInteger(e[1]) && Number.isInteger(e[2])) (pool[e[0]] = pool[e[0]] || []).push([e[1] + sh.x, e[2] + sh.y]);
   // place buildings one by one on a fresh occupancy map, matching by type in code order
   const occ = new Int32Array(MAP_W * MAP_H);
   const free = (type, x, y) => {
