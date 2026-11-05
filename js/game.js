@@ -1106,6 +1106,7 @@ function statChips(b) {
     if (b.level >= 1) {
       const pr = PRIORITIES.find(p => p.id === (b.priority || 'close'));
       out.push(`<button class="chip chip-btn" data-act="priority"><b>TARGET</b>${pr.name}</button>`);
+      if (S.buildings.some(o => o !== b && o.type === b.type && o.level >= 1 && (o.priority || 'close') !== (b.priority || 'close'))) out.push(`<button class="chip chip-btn chip-mini" data-act="priority-all" title="Use this target for every ${d.name}" aria-label="Use this target for every ${d.name}"><b>ALL</b></button>`);
       if (b.spec) out.push(`<span class="chip spec-chip" style="--sc:${SPECS[b.spec].color}"><b>SPEC</b>${SPECS[b.spec].name}</span>`);
       else if (b.level >= SPEC_LEVEL) out.push(`<button class="chip chip-btn spec-ready" data-act="spec"><b>NEW</b>Choose specialization</button>`);
       else out.push(`<span class="chip"><b>SPEC</b>at level ${SPEC_LEVEL}</span>`);
@@ -1170,12 +1171,16 @@ function buildPanel(b, up) {
       if (qi >= 0) actions += `<button class="btn ghost queued" data-act="unqueue"><span class="btn-main">Queued #${qi + 1}</span><span class="btn-sub">Tap to cancel</span></button>`;
       else {
         actions += `<button class="btn upgrade ${up.ok ? '' : 'off'}" data-act="upgrade"><span class="btn-main">Upgrade</span>${sub}</button>`;
-        if (canQueue(b, up)) actions += `<button class="btn queue-btn" data-act="queue"><span class="btn-main">Queue</span><span class="btn-sub">${(S.queue || []).length}/${QUEUE_MAX}</span></button>`;
+        if (canQueue(b, up)) actions += `<button class="btn queue-btn" data-act="queue"><span class="btn-main">Queue</span><span class="btn-sub">${(S.queue || []).length}/${queueMax(hqLevel())}</span></button>`;
       }
     }
     if (DEFS[b.type].size === 1 && !up.max) {
       const same = S.buildings.filter(w => w.type === b.type && w.level === b.level && !w.job).length;
       if (same > 1) actions += `<button class="btn ghost" data-act="walls-all"><span class="btn-main">All ${same}</span><span class="btn-sub">to level ${b.level + 1}</span></button>`;
+    } else if (b.type !== 'hq' && !up.max && b.level >= 1) {
+      // timed buildings: start as many as the builders allow and queue the rest
+      const same = S.buildings.filter(w => w.type === b.type && w.level === b.level && !w.job && queueIndex(w) < 0).length;
+      if (same > 1 && b.level < levelCap(b.type, hqLevel())) actions += `<button class="btn ghost" data-act="type-all"><span class="btn-main">All ${same}</span><span class="btn-sub">to level ${b.level + 1}</span></button>`;
     }
     actions += `<button class="btn ghost" data-act="move">Move</button>`;
     if (b.type === 'hq') actions += `<button class="btn ghost" data-act="roadmap">Roadmap</button>`;
@@ -1237,6 +1242,12 @@ panel.addEventListener('click', e => {
     Sound.play('click'); save();
   }
   else if (act === 'walls-all') upgradeAllOf(b.type, b.level);
+  else if (act === 'type-all') upgradeAllTimed(b.type, b.level);
+  else if (act === 'priority-all') {
+    const n = S.buildings.filter(o => o.type === b.type && o.level >= 1).map(o => { o.priority = b.priority || 'close'; return o; }).length;
+    toast(`Every ${DEFS[b.type].name} (${n}) now targets: ${PRIORITIES.find(p => p.id === (b.priority || 'close')).name}`, 'good');
+    Sound.play('click'); save();
+  }
   else if (act === 'queue') queueUpgrade(b);
   else if (act === 'unqueue') unqueue(b);
   else if (act === 'sell') { sellArmed = true; }

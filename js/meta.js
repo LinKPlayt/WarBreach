@@ -120,9 +120,15 @@ function openQuartermaster() {
   $('#modal-body').querySelectorAll('[data-qm]').forEach(b => b.addEventListener('click', () => {
     const it = QM_ITEMS.find(x => x.id === b.dataset.qm), price = qmPrice(it);
     if (S.medals < price) { toast(`You need ${price} medals`, 'bad'); Sound.play('error'); return; }
-    if (it.kind && storageCap() - S[it.kind] < 1) { toast(`Your ${it.kind} storage is full. Spend some first`, 'bad'); Sound.play('error'); return; }
+    if (it.kind && storageCap() - (S[it.kind] || 0) < 1) { toast(`Your ${it.kind} storage is full. Spend some first`, 'bad'); Sound.play('error'); return; }
+    if (it.research && !(S.research && S.research.job)) { toast('Start a research project first', 'bad'); Sound.play('error'); return; }
     S.medals -= price;
-    if (it.kind) {
+    if (it.research) {
+      const j = S.research.job;
+      j.end = Math.max(Date.now(), j.end - it.research * 1000);
+      if (j.end <= Date.now()) finishResearch();
+      else toast(`${RESEARCH[j.id].name}: ${fmtTime((j.end - Date.now()) / 1000)} left`, 'good');
+    } else if (it.kind) {
       const c = storageCap(), amt = gainRes(it.kind, Math.round(c * it.amount / 10) * 10);
       pulseRes(it.kind);
       toast(`+${fmt(amt)} ${it.kind}`, 'good');

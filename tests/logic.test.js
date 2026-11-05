@@ -312,6 +312,141 @@ function check(name, ok, detail) { results.push({ name, ok: !!ok, detail }); con
   check('an outdated copy reloads onto the live build, once', /\?v=future-build/.test(url) && served >= 2 && served <= 3, `url ${url.replace(/^.*\//, '')}, version checks ${served}`);
   await p2.close();
 
+  // 13. Update 6.0
+  const u6 = await page.evaluate(() => {
+    const o = {};
+    const fresh = L => { if (B) { B.over = true; leaveBattle(); } closeModal(); T.base(L); S.obstacles = []; rebuildGrid(); S.gold = S.steel = S.oil = 5e6; S.medals = 500; };
+    // research topics
+    fresh(6);
+    startBattle(null); const aa0 = B.bonus.antiAir, wall0 = (S.buildings.find(b => b.type === 'wall') || {})._maxhp; B.over = true; leaveBattle(); closeModal();
+    if (!S.buildings.some(b => b.type === 'wall')) { const sp = nearestFree('wall', 6, 6); S.buildings.push({ id: S.nextId++, type: 'wall', x: sp.x, y: sp.y, level: 3, job: null, stored: 0 }); rebuildGrid(); }
+    startBattle(null); const w0 = S.buildings.find(b => b.type === 'wall')._maxhp; B.over = true; leaveBattle(); closeModal();
+    S.research.levels.antiair = 2; S.research.levels.fortify = 3; S.research.levels.drill = 5;
+    startBattle(null); o.aa = B.bonus.antiAir - aa0; o.fort = S.buildings.find(b => b.type === 'wall')._maxhp / w0; B.over = true; leaveBattle(); closeModal();
+    army().queue = []; trainTroop('rifle'); const q = army().queue[army().queue.length - 1]; o.drill = (q.end - q.start) / (TROOPS.rifle.time * 1000);
+    S.research.levels = {};
+    // vehicles first
+    startBattle(null); B.breakT = 0; battleUpdate(0.01); B.queue = []; B.units = [];
+    const mg = S.buildings.find(b => b.type === 'mg'), c = centerOf(mg);
+    spawnEnemy('rifleman'); const ri = B.units[0]; ri.x = c.x + 40; ri.y = c.y;
+    spawnEnemy('jeep'); const je = B.units[1]; je.x = c.x + 140; je.y = c.y;
+    mg.priority = 'vehicle'; mg._tgt = null; mg._rt = 0; mg._cd = 1; updateDefense(mg, 0.01); o.vehicleFirst = mg._tgt === je;
+    mg.priority = 'close'; mg._tgt = null; mg._rt = 0; updateDefense(mg, 0.01); o.closest = mg._tgt === ri;
+    // mud and wire: enemies move 12% slower
+    const walk = slow => { B.units = []; spawnEnemy('rifleman'); const u = B.units[0]; u.x = 2 * TILE; u.y = 2 * TILE; u.retarget = 99; u.tgt = null; B.bonus.slow = slow; const x0 = u.x, y0 = u.y; for (let i = 0; i < 20; i++) updateEnemy(u, 0.05); return Math.hypot(u.x - x0, u.y - y0); };
+    const d0 = walk(0), d1 = walk(0.12); o.mud = d1 / d0;
+    // war bonds
+    const m0 = waveMedals(3); B.bonus.medalsPerWave = 2; o.bonds = waveMedals(3) - m0;
+    B.over = true; leaveBattle(); closeModal();
+    // set every defense of a type at once (panel)
+    const mgs = S.buildings.filter(b => b.type === 'mg'); mgs.forEach(b => { b.priority = 'close'; }); mgs[0].priority = 'air';
+    select(mgs[0].id); refreshPanel(true); const pa = document.querySelector('#panel [data-act="priority-all"]'); if (pa) pa.click();
+    o.priorityAll = !!pa && mgs.every(b => b.priority === 'air'); select(null);
+    // build queue
+    o.queue = [1, 4, 8, 12].map(queueMax);
+    // Apocalypse
+    const ap = THREATS.find(t => t.id === 'apocalypse'); o.apocalypse = !!ap && ap.need === 25 && ap.hp > THREATS.find(t => t.id === 'nightmare').hp;
+    S.threat = 'apocalypse'; S.bestWave = 30; startBattle(null); B.waves = 7; endBattle('retreat'); o.apBest = S.stats.apocalypseBest; closeModal(); if (B) { B.over = true; leaveBattle(); } S.threat = 'regular';
+    // missions, achievements, cards, artifacts, quartermaster
+    o.missions = MISSIONS.length; o.missionsOk = MISSIONS.every(m => { const p = m.progress(S); return Array.isArray(p) && p.every(Number.isFinite); });
+    o.achOk = ACHIEVEMENTS.every(a => Number.isFinite(a.stat(S))) && ['gauntlet', 'contracts', 'apocalypse'].every(id => ACHIEVEMENTS.some(a => a.id === id));
+    o.cards = WAVE_CARDS.length; o.arts = new Set(ARTIFACTS.map(a => a.id)).size;
+    S.oil = 0; const oil = QM_ITEMS.find(i => i.id === 'oil-s'); o.qmOil = !!oil;
+    return o;
+  });
+  check('Anti-Air Rounds research adds 8% damage against aircraft per level', Math.abs(u6.aa - 0.16) < 1e-9, `+${u6.aa}`);
+  check('Fortification research adds 10% wall health per level', Math.abs(u6.fort - 1.3) < 0.01, `x${u6.fort.toFixed(3)}`);
+  check('Rapid Training research trains troops 8% faster per level', Math.abs(u6.drill - 0.6) < 0.01, `x${u6.drill.toFixed(3)}`);
+  check('Vehicles first picks a vehicle over a closer soldier', u6.vehicleFirst && u6.closest);
+  check('Mud and Wire slows enemies by 12%', Math.abs(u6.mud - 0.88) < 0.02, `x${u6.mud.toFixed(3)}`);
+  check('War Bonds adds medals for every cleared wave', u6.bonds === 2, `+${u6.bonds}`);
+  check('one tap sets a targeting priority for every defense of that type', u6.priorityAll);
+  check('the build queue grows with the Command Center (3, 4, 5, 6)', u6.queue.join() === '4,4,5,6' || u6.queue.join() === '3,4,5,6', u6.queue.join());
+  check('Apocalypse threat exists and records its best wave', u6.apocalypse && u6.apBest === 7, `best ${u6.apBest}`);
+  check('29 missions, all with valid progress', u6.missions === 29 && u6.missionsOk, `${u6.missions}`);
+  check('achievements include the three new ones and all compute', u6.achOk);
+  check('17 field upgrade cards and 24 unique Gauntlet artifacts', u6.cards === 17 && u6.arts === 24, `${u6.cards} cards, ${u6.arts} artifacts`);
+
+  const u6b = await page.evaluate(() => {
+    const o = {};
+    const fresh = L => { if (B) { B.over = true; leaveBattle(); } closeModal(); T.base(L); S.obstacles = []; rebuildGrid(); S.gold = S.steel = S.oil = 5e6; S.medals = 500; };
+    // Quartermaster
+    fresh(8); S.oil = 0;
+    openQuartermaster(); document.querySelector('[data-qm="oil-s"]').click(); o.oil = S.oil; closeModal();
+    S.research.job = null; const med0 = S.medals; openQuartermaster(); document.querySelector('[data-qm="grant"]').click(); o.grantRefused = S.medals === med0; closeModal();
+    const now = Date.now(); S.research.job = { id: 'ballistics', to: 1, start: now, end: now + 3 * 3600e3 };
+    openQuartermaster(); document.querySelector('[data-qm="grant"]').click(); o.grantLeft = Math.round((S.research.job.end - Date.now()) / 60000); closeModal();
+    S.research.job.end = Date.now() + 30 * 60e3; openQuartermaster(); document.querySelector('[data-qm="grant"]').click(); o.grantDone = !S.research.job && S.research.levels.ballistics === 1; closeModal();
+    // Gauntlet artifacts: coins, building health, precision, last stand
+    S.gauntlet = { active: false }; startGauntlet(); const run = gauntlet();
+    run.arts = ['salvage', 'concrete', 'marksmen', 'laststand'];
+    const plainHp = (() => { const g = S.buildings.find(b => b.type === 'goldmine'); return Math.round(statsFor('goldmine', g.level).hp * (1 + researchBonus('armor'))); })();
+    startBattle(gauntletMission('battle', 0)); B.breakT = 0; battleUpdate(0.01);
+    o.concrete = S.buildings.find(b => b.type === 'goldmine')._maxhp / plainHp;
+    o.precision = B.bonus.dmgType.sniper === 0.4 && B.bonus.dmgType.sentry === 0.4;
+    const gun = S.buildings.find(b => b.type === 'mg'), full = weaponOf(gun).dmg; const h = hq(); h._hp = h._maxhp * 0.4; o.lastStand = weaponOf(gun).dmg / full; h._hp = h._maxhp;
+    const coins0 = run.coins; B.units = []; B.queue = []; endBattle('victory'); o.coins = run.coins - coins0;
+    closeModal(); closeModal(); if (B) { B.over = true; leaveBattle(); } closeModal(); S.gauntlet = { active: false };
+    // weekly contracts
+    S.contracts = null; const list = contracts().list; o.contracts = list.length === 3 && new Set(list.map(c => c.id)).size === 3;
+    const c0 = list[0]; orderEvent(c0.id, c0.target + 5); o.contractProgress = c0.progress === c0.target;
+    const m0 = S.medals, n0 = S.stats.contracts || 0; const got = claimContract(0); o.contractPaid = !!got && S.medals - m0 === got.medals && (S.stats.contracts || 0) === n0 + 1 && claimContract(0) === null;
+    S.contracts.week = 'old'; o.contractsReset = contracts().list.every(c => c.progress === 0 && !c.claimed);
+    // upgrade every building of a type: free builders start, the rest queue
+    fresh(8); for (const b of S.buildings) { if (b.type === 'mg') b.level = 6; b.job = null; } S.queue = []; S.builders = 2;
+    const r = upgradeAllTimed('mg', 6); o.typeAll = r; o.typeAllJobs = S.buildings.filter(b => b.type === 'mg' && b.job).length; o.typeAllQueued = S.queue.length;
+    for (const b of S.buildings) b.job = null; S.queue = [];
+    // advisor
+    for (const b of S.buildings) if (DEFS[b.type].dmg && b.type !== 'hq' && !DEFS[b.type].trap) b.level = Math.max(1, b.level - 2);
+    const picks = advisorPicks(6); o.advisor = picks.length > 0 && picks.every((p, i) => p.gain > 0 && (!i || picks[i - 1].value >= p.value));
+    // inspector: an isolated building is flagged, closing the ring removes the open-road warning
+    fresh(7);
+    const lone = S.buildings.find(b => b.type === 'goldmine'); let spot = null;
+    for (let y = BORDER; y < MAP_H - BORDER - 1 && !spot; y++) for (let x = BORDER; x < MAP_W - BORDER - 1 && !spot; x++) if (footprintFree('goldmine', x, y, lone.id) && !S.buildings.some(d => d.level >= 1 && weaponOf(d) && distToBuilding(centerOf(d).x, centerOf(d).y, { type: 'goldmine', x, y }) < 9)) spot = { x, y };
+    lone.x = spot.x; lone.y = spot.y; rebuildGrid();
+    const ins = inspectBase(); o.exposed = ins.issues.some(i => i.id === 'exposed' && i.ids.includes(lone.id));
+    o.closedNoWarning = !inspectBase().issues.some(i => i.id === 'open'); // buildings packed around the HQ block every road
+    S.buildings = S.buildings.filter(b => b.type === 'hq' || b.type === 'mg'); rebuildGrid(); // a few guns, nothing in between
+    o.openRoad = inspectBase().issues.some(i => i.id === 'open');
+    // blueprints: every building placed, nothing overlapping, inside the build area, never on obstacles; undo restores
+    o.bp = [];
+    for (const L of [3, 7, 12]) {
+      fresh(L);
+      S.obstacles = [{ id: 1, x: 22, y: 12, kind: 'rock' }, { id: 2, x: 10, y: 20, kind: 'tree' }, { id: 3, x: 33, y: 9, kind: 'wreck' }];
+      const before = S.buildings.map(b => b.x + ',' + b.y).join(';');
+      for (const bp of BLUEPRINTS) {
+        const plan = planBlueprint(bp.id), seen = new Set(); let ok = !plan.unplaced.length;
+        for (const b of S.buildings) {
+          const p = plan.pos[b.id]; if (!p) { ok = false; continue; }
+          const n = DEFS[b.type].size;
+          for (let dy = 0; dy < n; dy++) for (let dx = 0; dx < n; dx++) { const k = (p[0] + dx) + ',' + (p[1] + dy); if (seen.has(k) || !inBuildArea(p[0] + dx, p[1] + dy) || obstacleAt(p[0] + dx, p[1] + dy)) ok = false; seen.add(k); }
+        }
+        o.bp.push([L, bp.id, ok]);
+      }
+      applyBlueprint('fortress'); const moved = S.buildings.map(b => b.x + ',' + b.y).join(';') !== before;
+      const closed = !inspectBase().issues.some(i => i.id === 'open');
+      undoBlueprint(); o.bp.push([L, 'undo', moved && closed && S.buildings.map(b => b.x + ',' + b.y).join(';') === before]);
+    }
+    return o;
+  });
+  check('Oil Drums add oil', u6b.oil > 0, `+${u6b.oil}`);
+  check('a Research Grant needs research running and takes an hour off', u6b.grantRefused && u6b.grantLeft === 120, `${u6b.grantLeft} min left`);
+  check('a Research Grant finishes research with under an hour left', u6b.grantDone);
+  check('Concrete Pour adds 25% building health in the Gauntlet', Math.abs(u6b.concrete - 1.25) < 0.01, `x${u6b.concrete.toFixed(3)}`);
+  check('Marksman School boosts the precision guns', u6b.precision);
+  check('Last Stand adds 60% damage below half Command Center health', Math.abs(u6b.lastStand - 1.6) < 0.01, `x${u6b.lastStand.toFixed(3)}`);
+  check('Salvage Crews add 2 coins to a win', u6b.coins === 5, `+${u6b.coins} coins`);
+  check('three different weekly contracts', u6b.contracts);
+  check('daily order events also advance weekly contracts', u6b.contractProgress);
+  check('a contract pays once and counts for the achievement', u6b.contractPaid);
+  check('contracts reset with the week', u6b.contractsReset);
+  check('Upgrade all starts what the builders can and queues the rest', u6b.typeAll.started === 2 && u6b.typeAllJobs === 2 && u6b.typeAllQueued === u6b.typeAll.queued && u6b.typeAll.queued >= 1, JSON.stringify(u6b.typeAll));
+  check('the Upgrade Advisor ranks upgrades by value', u6b.advisor);
+  check('the Base Inspector flags a building no defense covers', u6b.exposed);
+  check('the Base Inspector warns about an open road, and only then', u6b.openRoad && u6b.closedNoWarning);
+  check('every blueprint places every building inside the area, off obstacles, without overlaps', u6b.bp.filter(r => r[1] !== 'undo').every(r => r[2]), u6b.bp.filter(r => !r[2]).map(r => r.join(' ')).join(', '));
+  check('applying a blueprint closes the ring, and undo restores the old layout', u6b.bp.filter(r => r[1] === 'undo').every(r => r[2]));
+
   check('no page errors', !errors.length, errors.slice(0, 3).join(' | '));
   await browser.close(); srv.close();
   const failed = results.filter(r => !r.ok).length;

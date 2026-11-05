@@ -54,6 +54,7 @@ function startBattle(mission) {
   stormBattleStart();
   warBattleStart();
   legendsBattleStart();
+  overhaulBattleStart();
   S.stats.battles = (S.stats.battles || 0) + 1;
   tutorialEvent('battle');
   S.battles = (S.battles || 0) + 1;
@@ -488,7 +489,7 @@ function updateEnemy(u, dt) {
   u.moving = !!moveTo;
   if (moveTo) {
     const dx = moveTo.x - u.x, dy = moveTo.y - u.y, d = Math.hypot(dx, dy) || 1;
-    const step = Math.min(d, e.speed * (B.mods.fast || 1) * u.slow * TILE * dt);
+    const step = Math.min(d, e.speed * (B.mods.fast || 1) * (1 - ((B.bonus && B.bonus.slow) || 0)) * u.slow * TILE * dt);
     u.x += (dx / d) * step; u.y += (dy / d) * step;
     u.angle = Math.atan2(dy, dx);
     u.aim = u.angle;
@@ -763,6 +764,7 @@ function updateDefense(b, dt) {
       else if (pr === 'weak') score = -u.hp;
       else if (pr === 'first') score = -progressLeft(u);
       else if (pr === 'air') score = (u.air ? 1e6 : 0) - Math.hypot(u.x - c.x, u.y - c.y);
+      else if (pr === 'vehicle') score = (ENEMIES[u.type].vehicle ? 1e6 : 0) - Math.hypot(u.x - c.x, u.y - c.y);
       else score = -Math.hypot(u.x - c.x, u.y - c.y);
       if (score > best) { best = score; b._tgt = u; }
     }

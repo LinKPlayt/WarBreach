@@ -588,6 +588,7 @@ function openHub() {
     { id: 'mastery', name: 'Mastery', sub: 'Defense kill bonuses', fn: () => openMastery(openHub) },
     { id: 'intel', name: 'Intel feed', sub: S.logUnread ? `${S.logUnread} new` : 'Base activity', dot: !!S.logUnread, fn: () => openIntel(openHub) },
   ];
+  if (typeof hubExtraTiles === 'function') tiles.unshift(...hubExtraTiles()); // later updates add their own screens
   openModal(`
     <div class="settings">
       <div class="m-head"><h2>Operations</h2><span class="m-count">${B ? '' : S.name}</span></div>

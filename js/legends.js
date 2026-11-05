@@ -85,6 +85,7 @@ function drawParagons(ctx) {
 /* ================= Weapon and battle modifiers ================= */
 function legendWeaponMod(b, w) {
   if (b.paragon) { w.dmg *= PARAGON.dmg; w.fireRate *= PARAGON.rate; w.range *= PARAGON.range; }
+  if (B && B.lastStand) { const h = hq(); if (h && h._maxhp && h._hp < h._maxhp * 0.5) w.dmg *= 1 + B.lastStand; }
   if (b.type === 'vengeance' && B) w.dmg *= 1 + Math.min(DEFS.vengeance.vengeanceMax, (B.fallen || 0) * DEFS.vengeance.vengeance);
   w.dmg *= 1 + kBonus('guns');
   return w;
@@ -334,12 +335,15 @@ function applyArtifacts() {
   bo.dmgAll += fx.dmg || 0; bo.rate += fx.rate || 0; bo.range += fx.range || 0; bo.troops += fx.troops || 0; bo.hero += fx.hero || 0;
   bo.loot += fx.loot || 0; bo.antiAir += fx.antiAir || 0; bo.splash = (bo.splash || 0) + (fx.splash || 0);
   if (fx.cd) bo.cd *= Math.max(0.3, 1 - fx.cd);
+  if (fx.precision) for (const t of PRECISION_TYPES) bo.dmgType[t] = (bo.dmgType[t] || 0) + fx.precision;
+  B.lastStand = fx.lastStand || 0;
   if (fx.morale) B.morale = Math.max(B.morale || 0, Math.min(100, fx.morale));
   if (fx.enemyHp) B.mods.armored = (B.mods.armored || 1) * (1 + fx.enemyHp);
   if (fx.enemySpeed) B.mods.fast = (B.mods.fast || 1) * (1 + fx.enemySpeed);
   for (const b of S.buildings) {
     if (!b._maxhp) continue;
     if (fx.wallHp && (b.type === 'wall' || b.type === 'gate')) { b._maxhp = Math.round(b._maxhp * (1 + fx.wallHp)); b._hp = b._maxhp; }
+    if (fx.bldHp && b.type !== 'hq' && !isPassive(b.type)) { b._maxhp = Math.round(b._maxhp * (1 + fx.bldHp)); b._hp = b._maxhp; }
   }
   // damage from earlier battles stays; wrecks come back patched up to a fraction of their health
   for (const b of S.buildings) {
@@ -401,13 +405,14 @@ function gauntletBattleOver(reason) {
       if (k < 0.995) run.hp[b.id] = Math.round(k * 1000) / 1000;
     }
     if (fx.heal) repairGauntletBase(run, fx.heal);
-    run.coins += m.node === 'elite' ? 5 : 3;
+    const coins = (m.node === 'elite' ? 5 : 3) + (fx.coins || 0);
+    run.coins += coins;
     if (m.node === 'boss') { run.stage = GAUNTLET.stages; run.cleared = GAUNTLET.stages; return finishGauntlet(true); }
     advanceGauntlet();
     run.pick = rollArtifacts(3, m.node === 'elite' ? 2 : 0.3, run.arts);
     save();
     openModal(`<div class="brief"><div class="brief-head"><span class="stamp">Gauntlet ${m.stage + 1}/${GAUNTLET.stages}</span><h2>Battle won</h2>
-      <p>Command Center at ${Math.round(run.hq * 100)}%, other buildings at ${Math.round(gauntletBaseHealth(run) * 100)}%. Damage carries over to the next battle. +${m.node === 'elite' ? 5 : 3} coins. Choose an artifact for the rest of the run.</p></div>
+      <p>Command Center at ${Math.round(run.hq * 100)}%, other buildings at ${Math.round(gauntletBaseHealth(run) * 100)}%. Damage carries over to the next battle. +${coins} coins. Choose an artifact for the rest of the run.</p></div>
       <div class="brief-foot"><button class="btn" data-close>Choose artifact</button></div></div>`, () => { leaveBattle(); openGauntlet(); });
     logEvent('mission', `Gauntlet stage ${m.stage + 1} won`);
     return null;
@@ -698,6 +703,20 @@ const WHATS_NEW_55 = [
   ['Building panel', 'Costs wrap instead of being cut off, and the panel no longer covers the Campaign button'],
   ['Boss Raid', 'The time-up message names the right boss'],
 ];
+const WHATS_NEW_6 = [
+  ['Blueprints', 'One tap lays out your whole base: Fortress, Bastion or Balanced, planned for the buildings you own, with a preview, a layout score and undo (Operations hub)'],
+  ['Base Inspector', 'Scores your layout and lists what to fix: buildings no gun protects, gaps in air cover, idle support buildings and traps, open roads to the Command Center'],
+  ['Upgrade Advisor', 'Ranks your defense upgrades by firepower gained per resource, with Upgrade and Queue buttons'],
+  ['Weekly contracts', 'Three big objectives every week for medals, gold, steel and War Chest stars'],
+  ['Upgrade all', 'Upgrade every building of a type at once: free builders start right away, the rest are queued'],
+  ['Research', 'Three new topics: Anti-Air Rounds, Fortification and Rapid Training'],
+  ['Targeting', 'New Vehicles first priority, and one tap sets a priority for every defense of that type'],
+  ['Apocalypse', 'A fifth threat level after wave 25: triple-health enemies for nearly four times the loot'],
+  ['Gauntlet', 'Eight new artifacts, 24 in all, including Salvage Crews, Concrete Pour and Last Stand'],
+  ['Field upgrades', 'Four new endless cards: Capacitor Banks, Turret Overhaul, War Bonds and Mud and Wire'],
+  ['Bigger build queue', 'One more slot every four Command Center levels, up to six'],
+  ['More goals', 'Eight late-game missions and three achievements; Oil Drums and a Research Grant at the Quartermaster'],
+];
 const WHATS_NEW_56 = [
   ['Bigger base', 'The build area is almost twice as big (38 x 26 tiles), so every building and wall up to Command Center 12 fits. Your base moved to the middle of the new ground'],
   ['No more endless waves', 'Attackers that park out of reach now charge the Command Center after 30 seconds without progress, and pull back if they still get nowhere'],
@@ -710,9 +729,9 @@ const WHATS_NEW_56 = [
 ];
 // Shows once per update: for 5.0 itself, and again for 5.5 and 5.6 to players who already saw 5.0.
 function maybeShowWhatsNew5() {
-  if (S.seenUpdate5 === UPDATE5_VERSION && S.seenUpdate55 === UPDATE55_VERSION && S.seenUpdate56 === UPDATE56_VERSION) return false;
+  if (S.seenUpdate5 === UPDATE5_VERSION && S.seenUpdate55 === UPDATE55_VERSION && S.seenUpdate56 === UPDATE56_VERSION && S.seenUpdate6 === UPDATE6_VERSION) return false;
   const fresh = S.tut != null && S.tut < 99;
-  Object.assign(S, { seenUpdate56: UPDATE56_VERSION, seenUpdate55: UPDATE55_VERSION, seenUpdate5: UPDATE5_VERSION, seenUpdate4: UPDATE4_VERSION, seenUpdate3: UPDATE3_VERSION, seenPatch: PATCH_VERSION, seenUpdate2: UPDATE2_VERSION, seenUpdate: UPDATE_VERSION });
+  Object.assign(S, { seenUpdate6: UPDATE6_VERSION, seenUpdate56: UPDATE56_VERSION, seenUpdate55: UPDATE55_VERSION, seenUpdate5: UPDATE5_VERSION, seenUpdate4: UPDATE4_VERSION, seenUpdate3: UPDATE3_VERSION, seenPatch: PATCH_VERSION, seenUpdate2: UPDATE2_VERSION, seenUpdate: UPDATE_VERSION });
   save();
   if (fresh) return false;
   openWhatsNew5();
@@ -721,8 +740,10 @@ function maybeShowWhatsNew5() {
 function openWhatsNew5(back) {
   openModal(`
     <div class="settings">
-      <div class="m-head"><div><span class="stamp">Update ${UPDATE56_VERSION}</span><h2>Legends</h2></div></div>
-      <p class="lead">Find the Gauntlet, Challenge Editor, Knowledge and Field Album in the Operations hub (compass) and the menu.</p>
+      <div class="m-head"><div><span class="stamp">Update ${UPDATE6_VERSION}</span><h2>Overhaul</h2></div></div>
+      <p class="lead">Blueprints, the Base Inspector, the Upgrade Advisor and Weekly contracts are at the top of the Operations hub (compass).</p>
+      <div class="chap">${UPDATE6_VERSION}: Overhaul</div>
+      <ul class="whats-new">${WHATS_NEW_6.map(([a, b]) => `<li><b>${a}</b><span>${b}</span></li>`).join('')}</ul>
       <div class="chap">${UPDATE56_VERSION}: bigger base and balance</div>
       <ul class="whats-new">${WHATS_NEW_56.map(([a, b]) => `<li><b>${a}</b><span>${b}</span></li>`).join('')}</ul>
       <div class="chap">${UPDATE55_VERSION}: phone interface and fixes</div>

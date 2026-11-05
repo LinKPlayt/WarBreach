@@ -1405,3 +1405,15 @@ body.compact .co-face { width: 40px; height: 40px; }
 body.compact .co-text { font-size: 12px; margin: 2px 0 5px; }
 body.compact .co-next { min-height: 32px; }
 body.coach-top #toasts { top: var(--coach-bottom) !important; }
+
+/* ---------- Update 6.0: Base Inspector and Blueprints ---------- */
+.insp-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.insp-chips .chip { font-size: 12px; }
+.bp-wrap { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-start; justify-content: center; margin: 4px 0 8px; }
+.bp-map { width: min(380px, 100%); height: auto; aspect-ratio: 38 / 26; border-radius: 10px; border: 1px solid rgba(255, 255, 255, 0.12); image-rendering: pixelated; background: #26301d; }
+.bp-legend { display: grid; grid-template-columns: 1fr; gap: 4px; font-size: 12px; min-width: 150px; }
+.bp-key { display: flex; align-items: center; gap: 6px; opacity: 0.9; }
+.bp-key i { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+@media (max-height: 500px) { .bp-map { width: min(300px, 100%); } .bp-legend { grid-template-columns: 1fr 1fr; } }
+.chip.chip-mini { padding-left: 7px; padding-right: 7px; }
+.chip.chip-mini b { margin: 0; }

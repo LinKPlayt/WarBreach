@@ -1233,7 +1233,7 @@ const UPDATE55_VERSION = '5.5';
 const UPDATE56_VERSION = '5.6';
 // Build of these files. Must match version.json and the ?v= on every script and stylesheet in
 // index.html (tests/logic.test.js checks); bump all three together for every release.
-const BUILD = '5.6.3';
+const BUILD = '6.0.0';
 
 Object.assign(DEFS, {
   vengeance: {
@@ -1318,3 +1318,88 @@ const ALBUM = { killsPerCard: 25, defenseLevel: 5, heroLevel: 5, rewards: { enem
 const STREAK = { winWaves: 8, perWin: 0.1, max: 0.5 };
 const WEEKEND = { loot: 0.25, medalMul: 2 };
 const WELCOME_MIN = 20 * 60 * 1000;
+
+/* =================== Update 6.0: Overhaul =================== */
+const UPDATE6_VERSION = '6.0';
+
+// Research Lab: three new topics
+Object.assign(RESEARCH, {
+  antiair:  { name: 'Anti-Air Rounds', max: 8, desc: '+8% damage against aircraft', per: 0.08, cost: { gold: 1800, steel: 2200 } },
+  fortify:  { name: 'Fortification', max: 8, desc: '+10% wall and gate health', per: 0.10, cost: { gold: 900, steel: 2400 } },
+  drill:    { name: 'Rapid Training', max: 5, desc: '8% faster troop training', per: 0.08, cost: { gold: 2000, steel: 1000 } },
+});
+
+// Targeting: anti-armor setups
+PRIORITIES.push({ id: 'vehicle', name: 'Vehicles first' });
+
+// A fifth threat level for players who have beaten Nightmare
+THREATS.push({ id: 'apocalypse', name: 'Apocalypse', hp: 3.0, loot: 3.8, elite: 0.3, need: 25 });
+
+// Build queue: one more slot every four Command Center levels (3 at the start, 6 at Command Center 12)
+function queueMax(hqL) { return 3 + Math.floor((hqL || 1) / 4); }
+
+// Late-game missions
+MISSIONS.push(
+  { id: 'wave30', text: 'Survive wave 30', progress: s => [s.bestWave, 30], reward: { medals: 30 } },
+  { id: 'hq10', text: 'Command Center level 10', progress: s => [builtAt(s, 'hq', 10), 1], reward: { medals: 60 } },
+  { id: 'gauntlet1', text: 'Conquer the Gauntlet', progress: s => [s.stats.gauntletWins || 0, 1], reward: { medals: 40 } },
+  { id: 'album1', text: 'Finish a Field Album page', progress: s => [Object.keys(s.albumClaimed || {}).length, 1], reward: { medals: 15 } },
+  { id: 'raid1', text: 'Destroy a raid boss', progress: s => [s.stats.raidKills || 0, 1], reward: { medals: 25 } },
+  { id: 'chapter2', text: 'Finish campaign Chapter 2', progress: s => [Object.keys((s.campaign || {}).stars || {}).length, 18], reward: { medals: 80 } },
+  { id: 'paragon1', text: 'Forge a Paragon', progress: s => [s.buildings.filter(b => b.paragon).length, 1], reward: { medals: 50 } },
+  { id: 'wave50', text: 'Survive wave 50', progress: s => [s.bestWave, 50], reward: { medals: 100 } },
+);
+
+// New achievements
+ACHIEVEMENTS.push(
+  { id: 'gauntlet', name: 'Gauntlet Runner', stat: s => s.stats.gauntletWins || 0, tiers: [1, 5, 20], medals: [10, 25, 60], unit: 'Gauntlets conquered' },
+  { id: 'contracts', name: 'Contractor', stat: s => s.stats.contracts || 0, tiers: [3, 15, 50], medals: [5, 15, 40], unit: 'weekly contracts completed' },
+  { id: 'apocalypse', name: 'End of Days', stat: s => s.stats.apocalypseBest || 0, tiers: [5, 15, 30], medals: [10, 30, 80], unit: 'best wave on Apocalypse' },
+);
+
+// Gauntlet: eight more artifacts (24 in all)
+ARTIFACTS.push(
+  { id: 'salvage', name: 'Salvage Crews', rarity: 'common', desc: '+2 coins after every win', fx: { coins: 2 } },
+  { id: 'plating', name: 'Armor Plating', rarity: 'common', desc: 'Command Center +25% and walls +30% health', fx: { hqHp: 0.25, wallHp: 0.3 } },
+  { id: 'response', name: 'Rapid Response', rarity: 'common', desc: 'Abilities recharge 15% faster, +20% hero damage', fx: { cd: 0.15, hero: 0.2 } },
+  { id: 'concrete', name: 'Concrete Pour', rarity: 'rare', desc: 'Every building +25% health', fx: { bldHp: 0.25 } },
+  { id: 'engineers', name: 'Combat Engineers', rarity: 'rare', desc: 'Repair the whole base 12% after each win, +10% building health', fx: { heal: 0.12, bldHp: 0.1 } },
+  { id: 'marksmen', name: 'Marksman School', rarity: 'rare', desc: '+40% damage for Sniper Towers, Railguns, Watchtowers and Sentry Guns', fx: { precision: 0.4 } },
+  { id: 'bloodmoney', name: 'Blood Money', rarity: 'epic', desc: '+3 coins after every win, but the Command Center has 20% less health', fx: { coins: 3, hqHp: -0.2 } },
+  { id: 'laststand', name: 'Last Stand', rarity: 'epic', desc: '+60% damage while the Command Center is below half health', fx: { lastStand: 0.6 } },
+);
+const PRECISION_TYPES = ['sniper', 'railgun', 'watchtower', 'sentry'];
+
+// Quartermaster: oil and a research grant
+QM_ITEMS.push(
+  { id: 'oil-s', name: 'Oil Drums', desc: '+15% of storage in oil', medals: 8, kind: 'oil', amount: 0.15 },
+  { id: 'grant', name: 'Research Grant', desc: 'Takes 1 hour off the research in progress', medals: 12, research: 3600 },
+);
+
+// Endless field upgrades: four more cards
+WAVE_CARDS.push(
+  { id: 'capacitors', name: 'Capacitor Banks', desc: '+35% Tesla Coil, Laser Tower and Vengeance Tower damage', apply: b => { for (const t of ['tesla', 'laser', 'vengeance']) b.dmgType[t] = (b.dmgType[t] || 0) + 0.35; } },
+  { id: 'turrets', name: 'Turret Overhaul', desc: '+40% Sentry Gun and Watchtower damage', apply: b => { for (const t of ['sentry', 'watchtower']) b.dmgType[t] = (b.dmgType[t] || 0) + 0.4; } },
+  { id: 'bonds', name: 'War Bonds', desc: '+1 medal for every wave you clear in this battle', apply: b => { b.medalsPerWave = (b.medalsPerWave || 0) + 1; } },
+  { id: 'mud', name: 'Mud and Wire', desc: 'Enemies move 12% slower', apply: b => { b.slow = Math.min(0.5, (b.slow || 0) + 0.12); } },
+);
+
+// Weekly contracts: three bigger objectives every week, built on the daily order events
+const CONTRACT_TYPES = [
+  { id: 'kill', text: n => `Destroy ${n} enemies`, n: [600, 1000, 1600] },
+  { id: 'killair', text: n => `Shoot down ${n} aircraft`, n: [50, 90, 150] },
+  { id: 'killveh', text: n => `Destroy ${n} vehicles`, n: [80, 140, 220] },
+  { id: 'waves', text: n => `Clear ${n} waves`, n: [40, 70, 110] },
+  { id: 'train', text: n => `Train ${n} troops`, n: [60, 120, 200] },
+  { id: 'ability', text: n => `Use abilities ${n} times`, n: [30, 50, 80] },
+  { id: 'upgrade', text: n => `Finish ${n} upgrades`, n: [12, 20, 30] },
+  { id: 'mission', text: n => `Win ${n} campaign missions, daily challenges or raids`, n: [3, 5, 8] },
+];
+const CONTRACT_REWARD = { medals: [15, 22, 30], storage: [0.12, 0.18, 0.25] }; // by tier; storage share paid in gold and steel
+
+// Blueprints: one-tap layouts planned for the buildings you own
+const BLUEPRINTS = [
+  { id: 'fortress', name: 'Fortress', desc: 'Support and every gun packed around the Command Center, economy outside, double walls. Best in testing.', order: ['aura', 'long', 'short', 'econ'] },
+  { id: 'bastion', name: 'Bastion', desc: 'Economy and storage in the middle, every gun on the outside where it meets the enemy first.', order: ['econ', 'aura', 'long', 'short'] },
+  { id: 'balanced', name: 'Balanced', desc: 'Guns, support and economy mixed evenly, so every side of the base looks the same.', order: ['mixed'] },
+];

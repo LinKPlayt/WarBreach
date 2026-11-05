@@ -61,7 +61,7 @@ function trainTroop(t) {
   const last = A.queue.length ? A.queue[A.queue.length - 1].end : now;
   const speed = boostActive('train') ? 4 : 1;
   const start = Math.max(now, last);
-  A.queue.push({ type: t, start, end: start + d.time * 1000 / speed * (1 - kBonus('train')) });
+  A.queue.push({ type: t, start, end: start + d.time * 1000 / speed * (1 - kBonus('train') - researchBonus('drill')) });
   Sound.play('click');
   save();
   return true;
@@ -131,7 +131,7 @@ function openBarracks() {
         ${!st.locked ? (() => { const a = armoryStatus(t); return a.max ? '<span class="road-tag">Armory maxed</span>' : `<button class="btn ghost arm-btn ${a.ok ? '' : 'off'}" data-armory="${t}"><span class="btn-sub">Armory L${armoryLevel(t) + 1}: ${a.ok || a.reason === 'Not enough resources' ? costHTML(a.cost) : a.reason}</span></button>`; })() : ''}
         <button class="btn ${st.ok ? '' : 'off'}" data-train="${t}">
           <span class="btn-main">${st.locked ? 'Locked' : 'Train'}</span>
-          <span class="btn-sub">${st.locked ? st.reason : costHTML(costOf(d)) + `<span class="cost">${ICON.clock}${fmtTime(d.time / (boostActive('train') ? 4 : 1))}</span>`}</span>
+          <span class="btn-sub">${st.locked ? st.reason : costHTML(costOf(d)) + `<span class="cost">${ICON.clock}${fmtTime(d.time * (1 - kBonus('train') - researchBonus('drill')) / (boostActive('train') ? 4 : 1))}</span>`}</span>
         </button>
       </div>`;
   }).join('');

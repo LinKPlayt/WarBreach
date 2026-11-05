@@ -250,17 +250,16 @@ function onCoverClick(e) {
 }
 
 /* ================= Build queue ================= */
-const QUEUE_MAX = 3;
 function queueIndex(b) { return (S.queue || []).findIndex(q => q.id === b.id); }
 function canQueue(b, up) {
-  if (b.job || up.ok || up.max || queueIndex(b) >= 0 || (S.queue || []).length >= QUEUE_MAX) return false;
+  if (b.job || up.ok || up.max || queueIndex(b) >= 0 || (S.queue || []).length >= queueMax(hqLevel())) return false;
   const cap = storageCap();
   if (up.cost && (up.cost.gold > cap || up.cost.steel > cap || (up.cost.oil || 0) > cap)) return false; // could never be paid
   return up.reason === 'All builders are busy' || up.reason === 'Not enough resources';
 }
 function queueUpgrade(b) {
   if (!S.queue) S.queue = [];
-  if (S.queue.length >= QUEUE_MAX) { toast(`The queue holds ${QUEUE_MAX} upgrades`, 'bad'); return; }
+  if (S.queue.length >= queueMax(hqLevel())) { toast(`The queue holds ${queueMax(hqLevel())} upgrades`, 'bad'); return; }
   S.queue.push({ id: b.id });
   Sound.play('build'); toast(`${displayName(b.type, Math.max(1, b.level))} queued. It starts when a builder and resources are free`, 'good');
   save();
@@ -285,7 +284,7 @@ function processQueue(dt) {
 }
 function queueHTML() {
   const q = S.queue || [];
-  if (!q.length) return `<p class="lead">Build queue: empty. When every builder is busy, tap Queue on a building to line up its next upgrade (up to ${QUEUE_MAX}).</p>`;
+  if (!q.length) return `<p class="lead">Build queue: empty. When every builder is busy, tap Queue on a building to line up its next upgrade (up to ${queueMax(hqLevel())}).</p>`;
   return `<h3 class="report-h">Build queue</h3><ul class="units report">${q.map((x, i) => { const b = byId(x.id); if (!b) return ''; const st = upgradeStatus(b); return `<li><span>${i + 1}. ${displayName(b.type, Math.max(1, b.level))} &rarr; level ${b.level + 1}</span><b>${st.ok ? 'Starting' : st.reason === 'Not enough resources' ? 'Waiting for resources' : 'Waiting for a builder'}</b></li>`; }).join('')}</ul>`;
 }
 function drawQueueBadges(ctx) {

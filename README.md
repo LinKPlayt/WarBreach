@@ -196,6 +196,15 @@ Then Sgt. Vance runs an 18-step guided tutorial with a spotlight on what to tap:
 - Skip it any time (two taps), and replay the tutorial or the intro from **Settings > Data**.
 - Returning players never see it. Players who were part-way through the old four hints get the new tutorial without the intro.
 
+## Update 6.0: Overhaul
+
+Planned from what the 5.6 simulations showed: the same buildings survived anywhere from 16 to 37 waves depending only on the layout, and waves stalled on buildings no defense could reach. The plan and results are in [docs/update-6.0-plan.md](docs/update-6.0-plan.md).
+
+**New:** Blueprints, one-tap layouts planned for the buildings you own (Fortress, Bastion or Balanced) with a preview, a layout score and undo · Base Inspector, a layout score and a list of what to fix (unprotected buildings, air cover, idle support buildings and traps, open roads) · Upgrade Advisor, defense upgrades ranked by firepower per resource · Weekly contracts, three big objectives a week · Upgrade all, for any building type, using free builders and the queue.
+**Improved:** Research Lab (Anti-Air Rounds, Fortification, Rapid Training) · targeting (Vehicles first, and copy a priority to every defense of the type) · build queue (up to 6 slots) · Apocalypse threat after wave 25 · 8 late-game missions · 3 achievements · 8 Gauntlet artifacts (24 in all) · Oil Drums and a Research Grant at the Quartermaster · 4 endless field upgrades.
+
+In simulated endless battles at Command Center 7, the Fortress blueprint survived 27.7 waves on average, against 17.7 for the starting layout. Every 6.0 item has a logic check (70 in `tests/logic.test.js`), and the battle soak, Gauntlet run, UI fuzzing and phone layout checks pass.
+
 ## Update 5.6: bigger base and balance
 
 Found by simulating endless waves at every Command Center level, all 18 campaign missions and full Gauntlet runs, plus random UI testing.
@@ -236,6 +245,7 @@ Found by simulating endless waves at every Command Center level, all 18 campaign
 - `js/settings.js` – main menu and the tabbed Settings screen
 - `js/warlords.js` – Update 4.0: weather, morale, Sentry Gun, Drone Hangar, new enemies, Maj. Kade, Shield Trooper, checkpoints, forecast, Vault, Trading Post, mastery, leagues, gear upgrades, share codes, Intel feed, undo-sell
 - `js/tutorial.js` – the first-launch intro and the guided tutorial (Sgt. Vance)
+- `js/overhaul.js` – Update 6.0: Blueprints (layout planner), Base Inspector, Upgrade Advisor, Weekly contracts, upgrade-all, and the battle hooks for the 6.0 research, field upgrades and Apocalypse threat
 - `js/legends.js` – Update 5.0: the Gauntlet, Paragons, Challenge Editor, Commander Knowledge, Vengeance Tower, Decoy Beacon, army presets, Field Album, win streaks, Weekend Blitz, welcome-back report
 - `js/game.js` – state, saving, placement, input, HUD and main loop
 - `style.css` – HUD, panels, shop and modals
