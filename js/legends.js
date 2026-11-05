@@ -545,6 +545,7 @@ function openChallenges(back) {
   $('#btn-ch-new').addEventListener('click', () => { chDraft = { name: 'My challenge', waves: 4, level: Math.max(5, (S.bestWave || 5)), types: ['rifleman', 'tank', 'drone'], rules: [], weather: 'clear', daytime: 'day' }; openChallengeEditor(back); });
   $('#btn-ch-import').addEventListener('click', () => {
     const c = parseChallenge($('#ch-import').value);
+    if (!c && applyBaseCodeAnywhere($('#ch-import').value)) return; // a base code pasted here by mistake
     if (!c) { toast('That is not a valid challenge code', 'bad'); Sound.play('error'); return; }
     if (list.length >= 10) { toast('Delete a challenge first (10 max)', 'bad'); return; }
     list.push(c); save(); toast(`Imported "${c.name}"`, 'good'); openChallenges(back);
@@ -704,7 +705,8 @@ const WHATS_NEW_56 = [
   ['Total War', 'Campaign mission 11 is no longer a big jump over mission 10'],
   ['Steel and oil', 'Steel Foundries make 30% more and Oil Derricks 50% more, so they keep up with gold'],
   ['Overtime Shift', 'Keeps doubling production while the game is closed'],
-  ['Base codes', 'Much shorter, and they import even when pasted with extra spaces, line breaks or quotes. Older codes still work'],
+  ['Base codes', 'Much shorter, and they import even when pasted with extra spaces, line breaks or quotes, or into the backup or challenge box by mistake. Older codes still work'],
+  ['Always up to date', 'The game checks for a newer version when it opens and loads it, so a phone never keeps running an old copy. Settings shows the build number'],
 ];
 // Shows once per update: for 5.0 itself, and again for 5.5 and 5.6 to players who already saw 5.0.
 function maybeShowWhatsNew5() {

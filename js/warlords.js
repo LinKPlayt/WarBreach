@@ -672,6 +672,19 @@ function parseLayoutCode(raw) {
   }
   return { ok: false, reason: 'That is not a WarBreach base code. Base codes start with WB5: or WB4:' };
 }
+// Any code box in the game hands base codes here, so a layout pasted into the wrong box still works.
+// Returns true when the text was a base code (applied or refused with a message).
+function applyBaseCodeAnywhere(text) {
+  const t = String(text || '').toUpperCase();
+  if (t.indexOf(SHARE_PREFIX5) < 0 && t.indexOf(SHARE_PREFIX) < 0) return false;
+  if (typeof B !== 'undefined' && B) { toast('Finish the battle first, then apply the base code', 'bad'); return true; }
+  const r = importLayoutCode(text);
+  if (!r.ok) { toast(r.reason, 'bad'); Sound.play('error'); return true; }
+  modalOnClose = null; closeModal();
+  toast(`That was a base code: layout applied, ${r.matched} buildings placed`, 'good');
+  logEvent('layout', `Imported a base layout (${r.matched} buildings matched)`);
+  return true;
+}
 function importLayoutCode(code) {
   const parsed = parseLayoutCode(code);
   if (!parsed.ok) return parsed;

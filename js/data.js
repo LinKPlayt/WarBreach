@@ -1231,6 +1231,9 @@ ACHIEVEMENTS.push(
 const UPDATE5_VERSION = '5.0';
 const UPDATE55_VERSION = '5.5';
 const UPDATE56_VERSION = '5.6';
+// Build of these files. Must match version.json and the ?v= on every script and stylesheet in
+// index.html (tests/logic.test.js checks); bump all three together for every release.
+const BUILD = '5.6.3';
 
 Object.assign(DEFS, {
   vengeance: {

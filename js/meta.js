@@ -220,6 +220,8 @@ function openBackup() {
     e.preventDefault();
     const raw = $('#backup-in').value.trim();
     if (!raw) { toast('Paste a backup code first', 'bad'); return; }
+    // a base layout code pasted here by mistake: apply it as a layout instead of refusing it
+    if (applyBaseCodeAnywhere(raw)) return;
     let s2 = null;
     try { s2 = load(decodeURIComponent(escape(atob(raw)))); } catch (err) { s2 = null; }
     if (!s2) { toast('That code is not a valid WarBreach backup', 'bad'); Sound.play('error'); return; }

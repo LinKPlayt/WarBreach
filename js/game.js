@@ -1815,4 +1815,20 @@ function start(hotData) {
   requestAnimationFrame(t => { lastFrame = t; frame(t); });
 }
 
+// Phones (home-screen apps above all) can keep running old copies of the game files after an
+// update. Ask the server which build is live, skipping every cache, and reload once onto it.
+function checkForUpdate() {
+  if (!/^https?:$/.test(location.protocol) || !window.fetch) return;
+  fetch(`version.json?t=${Date.now()}`, { cache: 'no-store' }).then(r => (r.ok ? r.json() : null)).then(v => {
+    if (!v || !v.build || v.build === BUILD || B) return; // never in the middle of a battle
+    let tried = null;
+    try { tried = sessionStorage.getItem('warbreach.reloadFor'); sessionStorage.setItem('warbreach.reloadFor', v.build); } catch (e) { /* no session storage */ }
+    if (tried === v.build) return; // reloaded for this build already: never loop
+    try { save(); } catch (e) { /* keep going */ }
+    location.replace(`${location.pathname}?v=${encodeURIComponent(v.build)}${location.hash}`);
+  }).catch(() => { /* offline: play the copy we have */ });
+}
+
 window.claude?.hot?.ready ? window.claude.hot.ready(start) : start(window.claude?.hot?.data ?? {});
+checkForUpdate();
+document.addEventListener('visibilitychange', () => { if (!document.hidden) checkForUpdate(); });

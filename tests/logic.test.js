@@ -279,6 +279,39 @@ function check(name, ok, detail) { results.push({ name, ok: !!ok, detail }); con
   check('damage carries into the next Gauntlet battle; wrecks come back patched up', close2(gc.next.a, 0.4) && close2(gc.next.b, gc.wreck) && !gc.next.bDead && close2(gc.next.hq, 0.8), JSON.stringify(gc.next));
   check('a Field camp repairs the whole base', close2(gc.camp.a, 0.4 + gc.heal) && close2(gc.camp.b, gc.heal) && close2(gc.camp.hq, Math.min(1, 0.8 + gc.heal)), JSON.stringify(gc.camp));
 
+  // 11. A base code pasted into the backup box or the challenge import box is applied as a layout.
+  const boxes = await page.evaluate(async () => {
+    if (B) { B.over = true; leaveBattle(); } closeModal();
+    S = newBase(); S.obstacles = []; rebuildGrid();
+    const code = exportLayoutCode(), at = () => S.buildings.map(b => [b.x, b.y]).join(';'), before = at();
+    const move = () => { for (const b of S.buildings) if (b.type !== 'hq') { const sp = nearestFree(b.type, 6, 6); b.x = sp.x; b.y = sp.y; rebuildGrid(); } };
+    const out = {};
+    move(); openBackup(); document.querySelector('#backup-in').value = code; document.querySelector('#btn-restore').click();
+    out.backup = at() === before && document.querySelector('#modal').hidden;
+    move(); openChallenges(); document.querySelector('#ch-import').value = code; document.querySelector('#btn-ch-import').click();
+    out.challenge = at() === before;
+    closeModal();
+    return out;
+  });
+  check('a base code pasted into the backup box is applied as a layout', boxes.backup);
+  check('a base code pasted into the challenge import box is applied as a layout', boxes.challenge);
+
+  // 12. The build number matches everywhere, and an outdated copy reloads once onto the live build.
+  const indexHtml = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+  const live = JSON.parse(fs.readFileSync(path.join(ROOT, 'version.json'), 'utf8')).build;
+  const build = await page.evaluate(() => BUILD);
+  const tags = indexHtml.match(/(?:src|href)="(?:js\/[a-z]+\.js|style\.css)\?v=([^"]+)"/g) || [];
+  const scripts = (indexHtml.match(/<script src="js\//g) || []).length;
+  check('BUILD, version.json and every script and stylesheet link agree', build === live && tags.length === scripts + 1 && tags.every(t => t.endsWith(`?v=${live}"`)), `BUILD ${build}, version.json ${live}, ${tags.length} tagged links`);
+  const p2 = await (await browser.newContext({ viewport: { width: 844, height: 390 } })).newPage();
+  let served = 0;
+  await p2.route('**/version.json*', r => { served++; r.fulfill({ contentType: 'application/json', body: JSON.stringify({ build: 'future-build' }) }); });
+  await p2.goto(`http://localhost:${srv.address().port}/index.html`);
+  await p2.waitForTimeout(2500);
+  const url = p2.url();
+  check('an outdated copy reloads onto the live build, once', /\?v=future-build/.test(url) && served >= 2 && served <= 3, `url ${url.replace(/^.*\//, '')}, version checks ${served}`);
+  await p2.close();
+
   check('no page errors', !errors.length, errors.slice(0, 3).join(' | '));
   await browser.close(); srv.close();
   const failed = results.filter(r => !r.ok).length;

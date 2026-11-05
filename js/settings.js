@@ -67,7 +67,7 @@ function openSettings(back, tab) {
     <div class="settings set-wrap">
       <div class="m-head set-head"><h2>Settings</h2><div class="tabs set-tabs">${SET_TABS.map(([id, name]) => `<button class="tab ${id === setTab ? 'on' : ''}" data-st="${id}">${name}</button>`).join('')}</div></div>
       <div class="set-body" id="set-body"></div>
-      <div class="settings-row set-foot"><span class="set-ver">WarBreach ${UPDATE56_VERSION} · Legends</span><button class="btn" data-close>Done</button></div>
+      <div class="settings-row set-foot"><span class="set-ver">WarBreach ${UPDATE56_VERSION} · Legends · build ${BUILD}</span><button class="btn" data-close>Done</button></div>
     </div>`, back || null);
   const body = $('#modal-body');
   body.querySelectorAll('[data-st]').forEach(t => t.addEventListener('click', () => {
