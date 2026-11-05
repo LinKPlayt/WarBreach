@@ -222,7 +222,7 @@ function inspectBase() {
   const idleTraps = S.buildings.filter(b => DEFS[b.type].trap && b.level >= 1 && !lanes.some(l => segDist(centerOf(b).x, centerOf(b).y, l[0], l[1], l[2], l[3]) <= 4 * TILE));
   if (idleTraps.length) issues.push({ id: 'traps', weight: 0.5, of: S.buildings.filter(b => DEFS[b.type].trap && b.level >= 1).length, ids: idleTraps.map(b => b.id), title: `${idleTraps.length} trap${idleTraps.length > 1 ? 's' : ''} away from the roads`, text: 'Enemies come in along the west, east and north roads. Mines and wire far from those lines may never be touched.' });
   const open = openRoads();
-  if (open.length && hasGuns) issues.push({ id: 'open', weight: 4 * open.length, of: 1, ids: [], title: `Open path from the ${open.map(g => ROAD_NAMES[g]).join(' and ')} road${open.length > 1 ? 's' : ''}`, text: 'Enemies can walk to the Command Center without breaking a single wall. Close the ring with walls or gates.' });
+  if (open.length && hasGuns) issues.push({ id: 'open', weight: 0.5 * open.length, of: 1, ids: [], title: `Open path from the ${open.map(g => ROAD_NAMES[g]).join(' and ')} road${open.length > 1 ? 's' : ''}`, text: 'Enemies can walk to the Command Center without breaking a single wall. Close the ring with walls or gates.' });
   // each issue costs its weight times (2 + 10 x the share of buildings it affects)
   let score = 100;
   for (const i of issues) score -= i.weight * (2 + 10 * Math.min(1, (i.ids.length || 1) / Math.max(1, i.of)));
