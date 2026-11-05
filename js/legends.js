@@ -302,13 +302,31 @@ function gauntletMission(node, stage) {
   }
   if (node === 'elite') waves[nW - 1].push({ type: 'siege', count: 1 });
   if (node === 'boss') waves[nW - 1].push({ type: H >= 9 ? 'titan' : 'siege', count: H >= 11 ? 2 : 1 });
+  const might = GAUNTLET.might[Math.min(H, MAX_HQ)] || 1;
+  const armored = might * (node === 'elite' ? 1.2 : node === 'boss' ? 1.3 : 1);
   return { id: 'gauntlet', gauntlet: true, node, stage, name: `Gauntlet ${stage + 1}/${GAUNTLET.stages}: ${GAUNTLET_NODES[node].name}`, hq: H, level: base, gates: ['w', 'e', 'n'],
-    mods: node === 'elite' ? { armored: 1.2 } : node === 'boss' ? { armored: 1.3 } : {}, waves, reward: { medals: 0 }, brief: GAUNTLET_NODES[node].desc };
+    mods: Object.assign(armored !== 1 ? { armored } : {}, might !== 1 ? { hits: might } : {}), waves, reward: { medals: 0 }, brief: GAUNTLET_NODES[node].desc };
 }
 function artifactFx() {
   const fx = {};
   for (const id of (gauntlet() || {}).arts || []) { const a = ARTIFACTS.find(x => x.id === id); if (a) for (const k in a.fx) fx[k] = (fx[k] || 0) + a.fx[k]; }
   return fx;
+}
+// Damage carried between Gauntlet battles: building id -> share of health left (missing = full).
+function gauntletCarried(b) { return b.type !== 'hq' && !isPassive(b.type) && !DEFS[b.type].decoy; }
+function gauntletBaseHealth(run) {
+  // buildings only (walls would drown everything else out), weighted by hit points
+  let tot = 0, left = 0;
+  for (const b of S.buildings) {
+    if (!gauntletCarried(b) || b.level < 1 || b.type === 'wall' || b.type === 'gate') continue;
+    const w = statsFor(b.type, b.level).hp;
+    tot += w; left += w * ((run.hp && run.hp[b.id] != null) ? run.hp[b.id] : 1);
+  }
+  return tot ? left / tot : 1;
+}
+function repairGauntletBase(run, k) {
+  run.hq = Math.min(1, run.hq + k);
+  for (const id of Object.keys(run.hp || {})) { run.hp[id] = Math.min(1, run.hp[id] + k); if (run.hp[id] >= 1) delete run.hp[id]; }
 }
 function applyArtifacts() {
   const run = gauntlet(); if (!run) return;
@@ -323,6 +341,12 @@ function applyArtifacts() {
     if (!b._maxhp) continue;
     if (fx.wallHp && (b.type === 'wall' || b.type === 'gate')) { b._maxhp = Math.round(b._maxhp * (1 + fx.wallHp)); b._hp = b._maxhp; }
   }
+  // damage from earlier battles stays; wrecks come back patched up to a fraction of their health
+  for (const b of S.buildings) {
+    const k = run.hp && run.hp[b.id];
+    if (k == null || !b._maxhp || !gauntletCarried(b)) continue;
+    b._hp = Math.max(1, Math.round(b._maxhp * (k > 0 ? k : GAUNTLET.wreck)));
+  }
   const h = hq();
   if (h && h._maxhp) { h._maxhp = Math.max(1, Math.round(h._maxhp * (1 + (fx.hqHp || 0)))); h._hp = Math.max(1, Math.round(h._maxhp * run.hq)); }
 }
@@ -330,8 +354,8 @@ function chooseNode(i) {
   const run = gauntlet(); if (!run || run.pick || run.shop) return false;
   const node = run.nodes[i]; if (!node) return false;
   if (node === 'camp') {
-    run.hq = Math.min(1, run.hq + GAUNTLET.campHeal);
-    advanceGauntlet(); Sound.play('heal'); toast('The engineers patched up the Command Center', 'good');
+    repairGauntletBase(run, GAUNTLET.campHeal);
+    advanceGauntlet(); Sound.play('heal'); toast('The engineers patched up the base', 'good');
     return 'camp';
   }
   if (node === 'merchant') {
@@ -369,14 +393,21 @@ function gauntletBattleOver(reason) {
   B.over = true;
   if (reason === 'victory' && run) {
     const fx = artifactFx();
-    run.hq = Math.min(1, frac + (fx.heal || 0));
+    run.hq = frac;
+    run.hp = {};
+    for (const b of S.buildings) {
+      if (!gauntletCarried(b) || !b._maxhp) continue;
+      const k = b._dead ? 0 : Math.max(0, b._hp) / b._maxhp;
+      if (k < 0.995) run.hp[b.id] = Math.round(k * 1000) / 1000;
+    }
+    if (fx.heal) repairGauntletBase(run, fx.heal);
     run.coins += m.node === 'elite' ? 5 : 3;
     if (m.node === 'boss') { run.stage = GAUNTLET.stages; run.cleared = GAUNTLET.stages; return finishGauntlet(true); }
     advanceGauntlet();
     run.pick = rollArtifacts(3, m.node === 'elite' ? 2 : 0.3, run.arts);
     save();
     openModal(`<div class="brief"><div class="brief-head"><span class="stamp">Gauntlet ${m.stage + 1}/${GAUNTLET.stages}</span><h2>Battle won</h2>
-      <p>Command Center at ${Math.round(run.hq * 100)}%. +${m.node === 'elite' ? 5 : 3} coins. Choose an artifact for the rest of the run.</p></div>
+      <p>Command Center at ${Math.round(run.hq * 100)}%, other buildings at ${Math.round(gauntletBaseHealth(run) * 100)}%. Damage carries over to the next battle. +${m.node === 'elite' ? 5 : 3} coins. Choose an artifact for the rest of the run.</p></div>
       <div class="brief-foot"><button class="btn" data-close>Choose artifact</button></div></div>`, () => { leaveBattle(); openGauntlet(); });
     logEvent('mission', `Gauntlet stage ${m.stage + 1} won`);
     return null;
@@ -409,7 +440,7 @@ function openGauntlet(back) {
   let body;
   if (!run) {
     const last = S.gauntlet && S.gauntlet.last;
-    body = `<p class="lead">A roguelite run of ${GAUNTLET.stages} battles with your own base. Pick your path at every stage, collect artifacts, and beat the Warlord at the end. Command Center damage carries over between battles; one defeat ends the run.</p>
+    body = `<p class="lead">A roguelite run of ${GAUNTLET.stages} battles with your own base. Pick your path at every stage, collect artifacts, and beat the Warlord at the end. Damage to your base carries over between battles, and a Field camp repairs it; one defeat ends the run.</p>
       ${last ? `<p class="lead">Last run: ${last.won ? 'conquered' : `${last.stages} stages`} · +${last.medals} medals.</p>` : ''}
       <ul class="units"><li><span>Best run</span><b>${S.gauntletBest || 0} / ${GAUNTLET.stages}</b></li><li><span>Victories</span><b>${S.stats.gauntletWins || 0}</b></li></ul>
       <div class="settings-row"><button class="btn battle-go ${hqLevel() >= GAUNTLET.hq ? '' : 'off'}" id="btn-g-start">${hqLevel() >= GAUNTLET.hq ? 'Start a run' : `Command Center ${GAUNTLET.hq}`}</button><button class="btn ghost" data-close>Back</button></div>`;
@@ -420,7 +451,7 @@ function openGauntlet(back) {
       <div class="settings-row"><button class="btn" id="btn-g-leave">Move on</button></div>`;
   } else {
     body = `<div class="g-track">${Array.from({ length: GAUNTLET.stages }, (_, i) => `<i class="${i < run.stage ? 'done' : i === run.stage ? 'now' : ''}">${i + 1}</i>`).join('')}</div>
-      <ul class="units g-stats"><li><span>Command Center</span><b>${Math.round(run.hq * 100)}%</b></li><li><span>Coins</span><b>${run.coins}</b></li></ul>
+      <ul class="units g-stats"><li><span>Command Center</span><b>${Math.round(run.hq * 100)}%</b></li><li><span>Buildings</span><b>${Math.round(gauntletBaseHealth(run) * 100)}%</b></li><li><span>Coins</span><b>${run.coins}</b></li></ul>
       <div class="art-row">${run.arts.map(artChip).join('') || '<span class="lead">No artifacts yet.</span>'}</div>
       <h3 class="report-h">Choose your path</h3>
       <div class="g-nodes">${run.nodes.map((n, i) => `<button class="g-node n-${n}" data-node="${i}"><b>${GAUNTLET_NODES[n].name}</b><span>${GAUNTLET_NODES[n].desc}</span></button>`).join('')}</div>
@@ -669,7 +700,7 @@ const WHATS_NEW_55 = [
 const WHATS_NEW_56 = [
   ['Bigger base', 'The build area is almost twice as big (38 x 26 tiles), so every building and wall up to Command Center 12 fits. Your base moved to the middle of the new ground'],
   ['No more endless waves', 'Attackers that park out of reach now charge the Command Center after 30 seconds without progress, and pull back if they still get nowhere'],
-  ['Gauntlet', 'Gentler early stages, so a Command Center 5 base can reach the Warlord'],
+  ['Gauntlet', 'Damage to your whole base now carries over between battles, and Field camps repair it. Big bases face much tougher enemies, and the early stages are gentler, so a Command Center 5 base can reach the Warlord'],
   ['Total War', 'Campaign mission 11 is no longer a big jump over mission 10'],
   ['Steel and oil', 'Steel Foundries make 30% more and Oil Derricks 50% more, so they keep up with gold'],
   ['Overtime Shift', 'Keeps doubling production while the game is closed'],

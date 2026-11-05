@@ -207,7 +207,8 @@ Found by simulating endless waves at every Command Center level, all 18 campaign
 - An Overtime Shift bought before closing the game now keeps doubling production for the part of it spent away.
 
 **Balance:**
-- The Gauntlet was a wall at its unlock level (a full Command Center 5 base lost at stage 3) and is now a climb to the Warlord. The first stage starts at enemy level 4 at Command Center 5, and each stage adds 1.5 levels. From Command Center 8 the boss stage stays where it was, so battles do not get longer.
+- The Gauntlet was a wall at its unlock level (a full Command Center 5 base lost at stage 3) and is now a climb to the Warlord. The first stage starts at enemy level 4 at Command Center 5, and each stage adds 1.5 levels.
+- The Gauntlet was a free win from Command Center 8: big bases lost almost nothing in a battle, and only Command Center damage carried over. Now damage to every building carries over between battles (wrecks come back at 30% health), a Field camp repairs the whole base by 35% and the Field Hospital artifact repairs it 20% after each win. Enemies there get more health and damage instead of more numbers, so battles do not get longer: x1.8 at Command Center 8, x2.4 at 9, x3.4 at 10, x5.5 at 11 and x9 at 12 (bases at 11 and 12 are far stronger). In simulated runs a full Command Center 12 base still wins, but its buildings wear down to about three quarters; Elite assaults are the risky path. The run screen shows how damaged your other buildings are.
 - Campaign mission 11, Total War: enemy level 26 → 20 (mission 10 is level 11, mission 12 is level 34).
 - Steel Foundry: 20 → 26 steel per minute (storage raised to match). Upgrading everything took 1.5–2.4x as long in steel as in gold.
 - Oil Derrick: 8 → 12 oil per minute (storage raised to match). Levels 9+ took up to 2.2x as long in oil as in gold.

@@ -1275,12 +1275,17 @@ const KNOWLEDGE = [
 // start: enemy level of stage 1 for each Command Center level; perStage: how much tougher each
 // later stage gets. The low end used to be a wall (a full Command Center 5 base lost at stage 3);
 // from Command Center 8 the boss stage sits where it always did, so battles do not get longer.
-const GAUNTLET = { stages: 8, hq: 5, waveScale: 0.4, startCoins: 3, campHeal: 0.35, perStage: 1.5,
-  start: [0, 3, 3, 3, 3, 4, 8, 12, 18, 20, 21, 23, 24] };
+// might: enemy health and damage multiplier per Command Center level. Big bases took almost no
+// damage, and higher levels only meant more enemies and longer battles, so late bases face
+// fewer-but-harder enemies instead. Damage to every building carries over between battles
+// (wrecks come back at `wreck` health); a Field camp repairs the whole base by campHeal.
+const GAUNTLET = { stages: 8, hq: 5, waveScale: 0.4, startCoins: 3, campHeal: 0.35, perStage: 1.5, wreck: 0.3,
+  start: [0, 3, 3, 3, 3, 4, 8, 12, 18, 20, 21, 23, 24],
+  might: [1, 1, 1, 1, 1, 1, 1, 1, 1.8, 2.4, 3.4, 5.5, 9] };
 const GAUNTLET_NODES = {
   battle: { name: 'Skirmish', desc: 'A standard fight. +3 coins', weight: 5 },
   elite: { name: 'Elite assault', desc: 'Tougher enemies and a Siege Tank. +5 coins, better artifacts', weight: 2 },
-  camp: { name: 'Field camp', desc: 'Repair the Command Center by 35%', weight: 1.5 },
+  camp: { name: 'Field camp', desc: 'Repair the whole base by 35%', weight: 1.5 },
   merchant: { name: 'Black market', desc: 'Spend coins on artifacts', weight: 1.5 },
   boss: { name: 'Warlord', desc: 'The final battle', weight: 0 },
 };
@@ -1297,7 +1302,7 @@ const ARTIFACTS = [
   { id: 'ordnance', name: 'Heavy Ordnance', rarity: 'rare', desc: '+30% splash damage', fx: { splash: 0.3 } },
   { id: 'drums', name: 'Rally Drums', rarity: 'rare', desc: 'Start every battle with 60% morale', fx: { morale: 60 } },
   { id: 'scrap', name: 'Scrap Armor', rarity: 'rare', desc: 'Walls and gates +80% health', fx: { wallHp: 0.8 } },
-  { id: 'medics', name: 'Field Hospital', rarity: 'rare', desc: 'Repair the Command Center 20% after each win', fx: { heal: 0.2 } },
+  { id: 'medics', name: 'Field Hospital', rarity: 'rare', desc: 'Repair the whole base 20% after each win', fx: { heal: 0.2 } },
   { id: 'profiteer', name: 'War Profiteer', rarity: 'epic', desc: '+80% loot, but enemies have 15% more health', fx: { loot: 0.8, enemyHp: 0.15 } },
   { id: 'glass', name: 'Glass Cannon', rarity: 'epic', desc: '+45% damage, but the Command Center has 30% less health', fx: { dmg: 0.45, hqHp: -0.3 } },
   { id: 'blitz', name: 'Blitz Tactics', rarity: 'epic', desc: '+30% fire rate, but enemies move 15% faster', fx: { rate: 0.3, enemySpeed: 0.15 } },

@@ -116,7 +116,7 @@ function stormEnemyUpdate(u, e, dt) {
     u.angle = Math.atan2(dy, dx); u.aim = u.angle; u.moving = true; u.walk += dt * 12;
     if (distToBuilding(u.x, u.y, u.tgt) <= e.range) {
       u.hp = 0;
-      const dmg = e.dmg * (u.elite ? ELITE.dmg : 1) * (1 + 0.04 * Math.max(0, B.wave - 11));
+      const dmg = e.dmg * (u.elite ? ELITE.dmg : 1) * (u.dmgK || 1) * (1 + 0.04 * Math.max(0, B.wave - 11));
       damageBuilding(u.tgt, dmg);
       for (const b of S.buildings) if (!b._dead && b !== u.tgt && !isPassive(b.type) && distToBuilding(u.x, u.y, b) <= e.splash) damageBuilding(b, dmg * 0.5);
       explosion(u.x, u.y, 30); Sound.play('bigboom'); buzz(30);

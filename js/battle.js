@@ -338,7 +338,7 @@ function spawnEnemy(type) {
   const elite = Math.random() < eliteChance;
   const hp = e.raidBoss ? Math.round(raidBossHp() * (type === 'skyfortress' ? 0.6 : 1)) : Math.round(enemyHp(type, lvl) * (B.mods.armored || 1) * (B.mods.swarm ? 0.55 : 1) * (B.mission ? 1 : B.threat.hp) * (elite ? ELITE.hp : 1) * (B.mission ? 1 : factionHp(type)));
   B.units.push({
-    elite, dmgK: e.raidBoss ? raidBossDmgK() : 1,
+    elite, dmgK: (e.raidBoss ? raidBossDmgK() : 1) * (B.mods.hits || 1), // hits: mission enemy damage multiplier
     type, x: p.x + (Math.random() - 0.5) * 24, y: p.y + (Math.random() - 0.5) * 24,
     hp, max: hp, cd: Math.random(), angle: 0, aim: 0, walk: Math.random() * 6,
     ox: (Math.random() - 0.5) * 16, oy: (Math.random() - 0.5) * 16,
@@ -573,10 +573,11 @@ function damageBuilding(b, dmg, attacker) {
 // A sapper reaches a building and detonates its charge.
 function sapperBlast(u, e) {
   u.hp = 0;
-  damageBuilding(u.tgt, e.dmg);
+  const dmg = e.dmg * (u.dmgK || 1);
+  damageBuilding(u.tgt, dmg);
   for (const b of S.buildings) {
     if (b._dead || b === u.tgt || isPassive(b.type)) continue;
-    if (distToBuilding(u.x, u.y, b) <= e.splash) damageBuilding(b, e.dmg * 0.5);
+    if (distToBuilding(u.x, u.y, b) <= e.splash) damageBuilding(b, dmg * 0.5);
   }
   explosion(u.x, u.y, 34);
   Sound.play('bigboom'); buzz(40);
@@ -648,7 +649,7 @@ function damageEnemy(u, dmg, src) {
       for (let i = 0; i < e.carries.count; i++) {
         const t = e.carries.type, hp = Math.round(enemyHp(t, B.mission ? B.mission.level + B.wave - 1 : B.wave) * (B.mods.armored || 1));
         const a = (i / e.carries.count) * Math.PI * 2;
-        B.units.push({ type: t, x: u.x + Math.cos(a) * 12, y: u.y + Math.sin(a) * 12, hp, max: hp, cd: 0.5 + Math.random(), angle: a, aim: a, walk: 0,
+        B.units.push({ type: t, dmgK: B.mods.hits || 1, x: u.x + Math.cos(a) * 12, y: u.y + Math.sin(a) * 12, hp, max: hp, cd: 0.5 + Math.random(), angle: a, aim: a, walk: 0,
           ox: (Math.random() - 0.5) * 16, oy: (Math.random() - 0.5) * 16, tgt: null, retarget: 0, air: false, moving: true });
       }
       banner('Troops dismounting', `${e.carries.count} riflemen out of the wreck`);

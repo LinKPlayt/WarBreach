@@ -233,6 +233,39 @@ function check(name, ok, detail) { results.push({ name, ok: !!ok, detail }); con
   check('new share codes round-trip', mig.codeNew);
   check('a new base starts in the middle of the map', Math.abs(mig.freshHq[0] - mig.center[0]) <= 1 && Math.abs(mig.freshHq[1] - mig.center[1]) <= 1, `HQ ${mig.freshHq}, middle ${mig.center}`);
 
+  // 10. Gauntlet: late bases face harder enemies, and base damage carries over between battles.
+  const gc = await page.evaluate(() => {
+    if (B) { B.over = true; leaveBattle(); } closeModal();
+    T.base(12); S.gauntlet = { active: false };
+    const m12 = gauntletMission('battle', 0), boss = gauntletMission('boss', 7);
+    T.base(5); const m5 = gauntletMission('battle', 0);
+    T.base(8); S.gauntlet = { active: false }; startGauntlet();
+    const run = gauntlet();
+    startBattle(gauntletMission('battle', 0)); B.breakT = 0; battleUpdate(0.01);
+    spawnEnemy('rifleman'); const dmgK = B.units[B.units.length - 1].dmgK; B.units = []; B.queue = [];
+    const [a, b] = S.buildings.filter(x => x.type === 'goldmine');
+    a._hp = a._maxhp * 0.4; b._hp = 0; b._dead = true;
+    const h = hq(); h._hp = h._maxhp * 0.8;
+    endBattle('victory');
+    const rec = { a: run.hp[a.id], b: run.hp[b.id], hq: run.hq, base: gauntletBaseHealth(run) };
+    closeModal(); closeModal(); if (B) { B.over = true; leaveBattle(); } closeModal();
+    if (run.pick) pickArtifact(run.pick.find(id => id !== 'medics' && id !== 'bunker' && id !== 'glass') || run.pick[0]);
+    startBattle(gauntletMission('battle', 1));
+    const next = { a: a._hp / a._maxhp, b: b._hp / b._maxhp, bDead: !!b._dead, hq: hq()._hp / hq()._maxhp };
+    B.over = true; leaveBattle(); closeModal();
+    repairGauntletBase(run, GAUNTLET.campHeal);
+    const camp = { a: run.hp[a.id], b: run.hp[b.id], hq: run.hq };
+    S.gauntlet = { active: false };
+    return { m12: m12.mods, boss: boss.mods, m5: m5.mods, might12: GAUNTLET.might[12], dmgK, might8: GAUNTLET.might[8], rec, next, camp, wreck: GAUNTLET.wreck, heal: GAUNTLET.campHeal };
+  });
+  const close2 = (x, y) => Math.abs(x - y) < 0.01;
+  check('Gauntlet enemies hit harder and last longer at Command Center 12', gc.m12.hits === gc.might12 && gc.m12.armored === gc.might12 && close2(gc.boss.armored, gc.might12 * 1.3), JSON.stringify(gc.m12));
+  check('Gauntlet strength is unchanged at its unlock level', !gc.m5.hits && !gc.m5.armored, JSON.stringify(gc.m5));
+  check('Gauntlet enemies spawn with the damage multiplier', close2(gc.dmgK, gc.might8), `dmgK ${gc.dmgK}`);
+  check('a won Gauntlet battle records damage to every building', close2(gc.rec.a, 0.4) && gc.rec.b === 0 && close2(gc.rec.hq, 0.8), JSON.stringify(gc.rec));
+  check('damage carries into the next Gauntlet battle; wrecks come back patched up', close2(gc.next.a, 0.4) && close2(gc.next.b, gc.wreck) && !gc.next.bDead && close2(gc.next.hq, 0.8), JSON.stringify(gc.next));
+  check('a Field camp repairs the whole base', close2(gc.camp.a, 0.4 + gc.heal) && close2(gc.camp.b, gc.heal) && close2(gc.camp.hq, Math.min(1, 0.8 + gc.heal)), JSON.stringify(gc.camp));
+
   check('no page errors', !errors.length, errors.slice(0, 3).join(' | '));
   await browser.close(); srv.close();
   const failed = results.filter(r => !r.ok).length;
