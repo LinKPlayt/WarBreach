@@ -1743,11 +1743,15 @@ function openRecord() {
 
 function applyOffline(elapsedSec) {
   if (elapsedSec <= 0) return;
+  // an Overtime Shift bought before leaving keeps doubling output for the part of it spent away
+  const now = Date.now(), awayFrom = now - elapsedSec * 1000;
+  const boosted = Math.max(0, Math.min(now, (S.boosts && S.boosts.prod) || 0) - awayFrom) / 1000;
+  const effSec = elapsedSec + Math.min(boosted, elapsedSec);
   for (const b of S.buildings) {
     const d = DEFS[b.type];
     if (d.produces && b.level >= 1) {
       const st = statsFor(b.type, b.level);
-      b.stored = Math.min(st.hold, b.stored + (st.rate * (1 + researchBonus('logistics') + kBonus('prod')) / 60) * elapsedSec);
+      b.stored = Math.min(st.hold, b.stored + (st.rate * (1 + researchBonus('logistics') + kBonus('prod')) / 60) * effSec);
     }
   }
 }

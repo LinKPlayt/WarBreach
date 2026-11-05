@@ -80,6 +80,7 @@ function startWave(n) {
   B.gates = B.mission ? B.mission.gates : waveGates(n);
   B.spawnT = 0.5;
   B.spawnIdx = 0;
+  B.lastT = 0; B.charging = false;
   B.waveSize = B.queue.length;
   stormWaveStart(n);
   if (B.mission) {
@@ -265,6 +266,7 @@ function battleUpdate(dt) {
       B.spawnT = Math.max(0.35, 0.95 - B.wave * 0.04);
     }
     if (!B.queue.length && !B.units.length && !stormPending()) waveCleared();
+    else if (!B.queue.length && !stormPending() && !B.raid) updateStragglers(dt);
   }
 
   for (const k in B.ab) B.ab[k] = Math.max(0, B.ab[k] - dt);
@@ -303,6 +305,27 @@ function battleUpdate(dt) {
       const c = centerOf(b);
       particles.push({ x: c.x + (Math.random() - 0.5) * 20, y: c.y - 14, vx: 6 + Math.random() * 6, vy: -22, g: 0, life: 1.6, max: 1.6, r: 4, grow: 6, color: 'smoke-dark' });
     }
+  }
+}
+
+/*
+ * Stragglers: enemies that park outside the reach of every defense (shelling an outlying
+ * building a Repair Bay keeps patching up, say) would hold a wave open forever.
+ * Once the wave has nothing left to send, STRAGGLER.charge seconds without progress
+ * (no enemy killed, no building destroyed) make the rest charge the Command Center,
+ * and STRAGGLER.retreat more seconds without progress make them pull back.
+ */
+const STRAGGLER = { charge: 30, retreat: 120 };
+function updateStragglers(dt) {
+  B.lastT = (B.lastT || 0) + dt; // reset by kills and destroyed buildings
+  if (B.lastT < STRAGGLER.charge) return;
+  if (!B.charging) { B.charging = true; banner('Stragglers charging', 'The last attackers are rushing the Command Center'); }
+  for (const u of B.units) if (!u.charge) { u.charge = true; u.tgt = null; u.retarget = 0; } // riflemen out of a wreck join in
+  if (B.lastT >= STRAGGLER.charge + STRAGGLER.retreat && B.units.length) {
+    const n = B.units.length;
+    for (const u of B.units) { u.hp = 0; u.escaped = true; }
+    B.units = [];
+    banner('Stragglers retreat', `${n} attacker${n > 1 ? 's' : ''} pulled back`);
   }
 }
 
@@ -411,7 +434,8 @@ function updateEnemy(u, dt) {
 
   if (u.retarget <= 0) {
     u.retarget = 0.35;
-    const near = nearestBuilding(u.x, u.y, e.range, true);
+    // charging stragglers only fight what blocks their path (picked up by the pathing below)
+    const near = u.charge ? null : nearestBuilding(u.x, u.y, e.range, true);
     if (near) u.tgt = near;
     else if (u.tgt && distToBuilding(u.x, u.y, u.tgt) > e.range + 0.3) u.tgt = null;
   }
@@ -435,7 +459,7 @@ function updateEnemy(u, dt) {
   let moveTo = null;
   if (!u.tgt) {
     if (u.air) {
-      const goal = nearestBuilding(u.x, u.y, 999, true);
+      const goal = u.charge ? hq() : nearestBuilding(u.x, u.y, 999, true);
       if (goal) {
         if (distToBuilding(u.x, u.y, goal) <= e.range) u.tgt = goal;
         else { const c = centerOf(goal); moveTo = { x: c.x + u.ox, y: c.y + u.oy }; }
@@ -536,6 +560,7 @@ function damageBuilding(b, dmg, attacker) {
   if (b._hp <= 0) {
     b._hp = 0;
     b._dead = true;
+    B.lastT = 0;
     const c = centerOf(b);
     explosion(c.x, c.y, DEFS[b.type].size * 18);
     Sound.play(b.type === 'wall' ? 'boom' : 'bigboom');
@@ -571,6 +596,7 @@ function damageEnemy(u, dmg, src) {
   if (dmg >= 120 && S.settings.dmgnums !== false) floaters.push({ x: u.x + (Math.random() - 0.5) * 10, y: u.y - 24, text: String(Math.round(dmg)), color: '#ffe08a', life: 0.8, max: 0.8, size: dmg >= 400 ? 18 : 13 });
   if (u.hp <= 0) {
     B.kills++;
+    B.lastT = 0;
     if (B.practice) { if (ed.vehicle || ed.air) explosion(u.x, u.y, ed.r * 1.6); return; }
     S.stats.kills++;
     stormEnemyKilled(u, ed);

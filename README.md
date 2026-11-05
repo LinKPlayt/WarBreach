@@ -196,6 +196,22 @@ Then Sgt. Vance runs an 18-step guided tutorial with a spotlight on what to tap:
 - Skip it any time (two taps), and replay the tutorial or the intro from **Settings > Data**.
 - Returning players never see it. Players who were part-way through the old four hints get the new tutorial without the intro.
 
+## Balance and bug-fix pass
+
+Found by simulating endless waves at every Command Center level, all 18 campaign missions and full Gauntlet runs, plus random UI testing.
+
+**Fixes:**
+- Waves could stay open forever: enemies parked just outside the reach of every defense and shelled an outlying building that a Repair Bay kept healing (Artillery Trucks and Stealth Commandos did the same from range). At Command Center 6–8 most waves stalled this way. Now, once a wave has nothing left to send, 30 seconds with no kill and no building destroyed make the remaining attackers charge the Command Center, and anything still alive after 2 more minutes without progress pulls back.
+- An Overtime Shift bought before closing the game now keeps doubling production for the part of it spent away.
+
+**Balance:**
+- The Gauntlet was a wall at its unlock level (a full Command Center 5 base lost at stage 3) and is now a climb to the Warlord. The first stage starts at enemy level 4 at Command Center 5, and each stage adds 1.5 levels. From Command Center 8 the boss stage stays where it was, so battles do not get longer.
+- Campaign mission 11, Total War: enemy level 26 → 20 (mission 10 is level 11, mission 12 is level 34).
+- Steel Foundry: 20 → 26 steel per minute (storage raised to match). Upgrading everything took 1.5–2.4x as long in steel as in gold.
+- Oil Derrick: 8 → 12 oil per minute (storage raised to match). Levels 9+ took up to 2.2x as long in oil as in gold.
+
+**Tests:** `node tests/logic.test.js` runs 18 checks in a headless browser (needs Playwright): stalled waves end, kills reset the timer, waves keep moving at Command Center 3, 6 and 9, offline boosts, Gauntlet scaling, storage versus upgrade costs, resource pacing and the campaign curve.
+
 ## Code layout
 
 - `js/data.js` – building stats, costs, limits per HQ level, wave previews
@@ -218,3 +234,4 @@ Then Sgt. Vance runs an 18-step guided tutorial with a spotlight on what to tap:
 - `js/legends.js` – Update 5.0: the Gauntlet, Paragons, Challenge Editor, Commander Knowledge, Vengeance Tower, Decoy Beacon, army presets, Field Album, win streaks, Weekend Blitz, welcome-back report
 - `js/game.js` – state, saving, placement, input, HUD and main loop
 - `style.css` – HUD, panels, shop and modals
+- `tests/logic.test.js` – headless logic and balance checks

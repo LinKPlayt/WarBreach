@@ -1,0 +1,185 @@
+// WarBreach logic checks for the balance and bug-fix pass.
+// Run: node tests/logic.test.js   (needs Playwright with Chromium available)
+'use strict';
+const { chromium } = require('playwright');
+const http = require('http'), fs = require('fs'), path = require('path');
+const ROOT = path.join(__dirname, '..');
+
+function serve() {
+  return new Promise(res => {
+    const srv = http.createServer((req, rsp) => {
+      let p = decodeURIComponent(req.url.split('?')[0]); if (p === '/') p = '/index.html';
+      const f = path.join(ROOT, p);
+      if (!f.startsWith(ROOT) || !fs.existsSync(f)) { rsp.writeHead(404); rsp.end(); return; }
+      const type = { '.js': 'text/javascript', '.css': 'text/css', '.html': 'text/html', '.svg': 'image/svg+xml' }[path.extname(f)] || 'application/octet-stream';
+      rsp.writeHead(200, { 'Content-Type': type });
+      fs.createReadStream(f).pipe(rsp);
+    }).listen(0, () => res(srv));
+  });
+}
+
+// In-page helpers: a full base at a Command Center level, and a fixed-step battle runner.
+const PAGE_HELPERS = `
+window.T = {
+  base(L) {
+    S = newBase(); S.tut = 99; S.introSeen = true;
+    S.buildings = S.buildings.filter(b => b.type === 'hq'); S.buildings[0].level = L; rebuildGrid();
+    const h = S.buildings[0], order = Object.keys(LIMITS).filter(t => t !== 'hq' && t !== 'wall' && !DEFS[t].deco && !DEFS[t].decoy && LIMITS[t][L] > 0);
+    order.sort((a, b) => (DEFS[b].cat === 'defense') - (DEFS[a].cat === 'defense'));
+    for (const t of order) for (let i = 0; i < LIMITS[t][L]; i++) {
+      const n = DEFS[t].size, sp = nearestFree(t, h.x + 1 - Math.floor(n / 2), h.y + 1 - Math.floor(n / 2));
+      if (sp) { S.buildings.push({ id: S.nextId++, type: t, x: sp.x, y: sp.y, level: Math.min(L, DEFS[t].max), job: null, stored: 0, baseAngle: 0 }); rebuildGrid(); }
+    }
+  },
+  run(secs, dt = 0.05) {
+    let t = 0;
+    while (t < secs && B && !B.over && B.phase !== 'lost' && B.phase !== 'won') {
+      if (B.paused) { const c = document.querySelector('#cards [data-card]'); if (c) c.click(); else break; }
+      battleUpdate(dt); t += dt;
+      if (particles.length > 900) particles.length = 0;
+    }
+    return t;
+  },
+};
+Sound.play = () => {}; window.buzz = () => {};
+`;
+
+const results = [];
+function check(name, ok, detail) { results.push({ name, ok: !!ok, detail }); console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${detail ? '  (' + detail + ')' : ''}`); }
+
+(async () => {
+  const srv = await serve();
+  const browser = await chromium.launch();
+  const page = await (await browser.newContext({ viewport: { width: 844, height: 390 } })).newPage();
+  const errors = [];
+  page.on('pageerror', e => errors.push(e.message));
+  await page.goto(`http://localhost:${srv.address().port}/index.html`);
+  await page.waitForTimeout(800);
+  await page.evaluate(PAGE_HELPERS);
+
+  // 1. A wave held open by enemies out of every defense's reach still ends.
+  const stall = await page.evaluate(() => {
+    T.base(3); S.forecast = null; startBattle(null); B.hero = null;
+    B.weather = WEATHER.find(w => w.id === 'clear'); // no lightning strikes
+    B.breakT = 0; battleUpdate(0.01); // wave 1 starts
+    B.dmgBy = {};
+    B.queue = []; B.units = [];
+    // two riflemen parked on the map edge, beside a building nothing can reach
+    const far = S.buildings.filter(b => b.type !== 'hq' && !isPassive(b.type)).sort((a, b) => a.x - b.x)[0];
+    for (let i = 0; i < 2; i++) { spawnEnemy('rifleman'); const u = B.units[B.units.length - 1]; u.x = 0.6 * TILE; u.y = (far.y + 0.5 + i * 0.3) * TILE; }
+    // make the building unbreakable so nothing ever dies: the worst case
+    for (const b of S.buildings) { b._maxhp = b._hp = 1e9; if (weaponOf(b)) b._stun = 1e9; if (DEFS[b.type].trap) b._dead = true; } // nothing dies, no gun or trap fires
+    B.troops = [];
+    const t0 = B.lastT || 0;
+    T.run(STRAGGLER.charge - 1);
+    const beforeCharge = B.units.some(u => u.charge);
+    T.run(2);
+    const charging = B.units.length === 0 || B.units.every(u => u.charge);
+    const dbg = `lastT ${B.lastT && B.lastT.toFixed(1)}, wave ${B.wave}, phase ${B.phase}, units ${B.units.map(u => u.type + (u.charge ? '*' : '')).join(' ')}, queue ${B.queue.length}, pending ${stormPending()}, dmgBy ${JSON.stringify(B.dmgBy)}`;
+    T.run(STRAGGLER.retreat + 5);
+    return { dbg, t0, beforeCharge, charging, cleared: B.waves >= 1, phase: B.phase, units: B.units.length };
+  });
+  check('stragglers do not charge before the no-progress timer', !stall.beforeCharge);
+  check('stragglers charge after STRAGGLER.charge seconds without progress', stall.charging, stall.charging ? '' : stall.dbg);
+  check('a stalled wave always ends', stall.cleared, `waves cleared ${stall.cleared ? '1+' : 0}, phase ${stall.phase}`);
+
+  // 2. Progress (a kill) resets the timer.
+  const reset = await page.evaluate(() => {
+    if (B) { B.over = true; leaveBattle(); } closeModal();
+    T.base(4); S.forecast = null; startBattle(null); B.hero = null; B.breakT = 0; battleUpdate(0.01);
+    B.queue = []; B.units = [];
+    spawnEnemy('rifleman'); const u = B.units[0]; u.x = 0.6 * TILE; u.y = 2 * TILE;
+    spawnEnemy('rifleman'); const v = B.units[1]; v.x = 0.6 * TILE; v.y = 3 * TILE;
+    B.lastT = STRAGGLER.charge - 2;
+    damageEnemy(v, 1e6, 'mg');
+    const after = B.lastT;
+    B.over = true; leaveBattle(); closeModal();
+    return after;
+  });
+  check('killing an enemy resets the no-progress timer', reset === 0, `lastT ${reset}`);
+
+  // 3. Waves at every Command Center level end without stalling for long (no enemy parks forever).
+  const soak = await page.evaluate(() => {
+    const out = [];
+    for (const L of [3, 6, 9]) {
+      T.base(L); S.forecast = null; startBattle(null);
+      let longest = 0, waveT = 0, w = 0;
+      for (let i = 0; i < 2400 && B.phase !== 'lost' && B.waves < 6; i++) {
+        T.run(0.5);
+        if (B.wave !== w) { w = B.wave; waveT = 0; } else if (B.phase === 'fight') { waveT += 0.5; longest = Math.max(longest, waveT); }
+      }
+      out.push({ L, waves: B.waves, longest });
+      B.over = true; leaveBattle(); closeModal();
+    }
+    return out;
+  });
+  for (const r of soak) check(`HQ${r.L}: endless waves keep moving`, r.longest < 400, `${r.waves} waves, longest ${Math.round(r.longest)}s`);
+
+  // 4. An Overtime Shift bought before leaving keeps working offline.
+  const off = await page.evaluate(() => {
+    T.base(3);
+    const m = S.buildings.find(b => b.type === 'goldmine'); m.stored = 0;
+    const st = statsFor('goldmine', m.level); const perSec = st.rate * (1 + researchBonus('logistics') + kBonus('prod')) / 60;
+    // away 200 s (well under the mine's capacity)
+    S.boosts = {}; applyOffline(200); const plain = m.stored;
+    m.stored = 0; S.boosts = { prod: Date.now() - 100 * 1000 }; applyOffline(200); const ended = m.stored; // boost ran out 100 s ago: half the time boosted
+    m.stored = 0; S.boosts = { prod: Date.now() + 3600 * 1000 }; applyOffline(200); const whole = m.stored;
+    S.boosts = {};
+    return { plain: plain / perSec, ended: ended / perSec, whole: whole / perSec, hold: st.hold / perSec };
+  });
+  const near = (a, b) => Math.abs(a - b) < 1;
+  check('offline production without a boost', near(off.plain, 200) && off.hold > 400, off.plain.toFixed(1));
+  check('offline boost counts only the boosted part of the time away', near(off.ended, 300), off.ended.toFixed(1));
+  check('offline boost that outlasts the absence doubles all of it', near(off.whole, 400), off.whole.toFixed(1));
+
+  // 5. Gauntlet scaling: the unlock level starts gently, later levels never start below Command Center 8's.
+  const g = await page.evaluate(() => {
+    const lv = [];
+    for (const H of [5, 6, 7, 8, 12]) { T.base(H); lv.push([H, gauntletMission('battle', 0).level, gauntletMission('boss', 7).level]); }
+    return { lv, len: GAUNTLET.start.length, max: MAX_HQ };
+  });
+  check('Gauntlet has a start level for every Command Center level', g.len === g.max + 1);
+  check('Gauntlet starts gently at its unlock level', g.lv[0][1] <= 6, `HQ5 stage 1 level ${g.lv[0][1]}`);
+  check('Gauntlet difficulty never drops as the Command Center grows', g.lv.every((r, i) => !i || (r[1] >= g.lv[i - 1][1] && r[2] >= g.lv[i - 1][2])), JSON.stringify(g.lv));
+
+  // 6. Economy: no upgrade costs more than you can store; steel and oil are not far behind gold.
+  const econ = await page.evaluate(() => {
+    const over = [], pace = [];
+    const cap = H => HQ_STORAGE[H] + LIMITS.depot[H] * statsFor('depot', H).storage;
+    for (const t of Object.keys(DEFS)) {
+      if (DEFS[t].deco || DEFS[t].decoy || !LIMITS[t]) continue;
+      const u = unlockLevel(t);
+      for (let L = 1; L <= DEFS[t].max; L++) {
+        const H = t === 'hq' ? L - 1 : Math.max(L, u); if (H < 1 || H > MAX_HQ) continue;
+        const c = costFor(t, L); if (Math.max(c.gold, c.steel, c.oil) > cap(H)) over.push(`${t} ${L}`);
+      }
+    }
+    for (let H = 2; H <= MAX_HQ; H++) {
+      const prod = { gold: 0, steel: 0, oil: 0 }, cost = { gold: 0, steel: 0, oil: 0 };
+      for (const [t, k] of [['goldmine', 'gold'], ['steelworks', 'steel'], ['derrick', 'oil']]) prod[k] += LIMITS[t][H] * statsFor(t, H).rate;
+      for (const t of Object.keys(LIMITS)) {
+        if (DEFS[t].deco || DEFS[t].decoy || (t !== 'hq' && H > DEFS[t].max)) continue;
+        const n = t === 'hq' ? 1 : LIMITS[t][H];
+        for (let i = 0; i < n; i++) { const c = costFor(t, H); for (const k in cost) cost[k] += c[k] || 0; }
+      }
+      const gh = cost.gold / prod.gold, sh = cost.steel / prod.steel, oh = prod.oil ? cost.oil / prod.oil : 0;
+      pace.push({ H, steel: sh / gh, oil: oh / gh });
+    }
+    return { over, pace };
+  });
+  check('no upgrade costs more than the storage you can have', !econ.over.length, econ.over.slice(0, 5).join(', '));
+  const worstSteel = Math.max(...econ.pace.map(p => p.steel)), worstOil = Math.max(...econ.pace.map(p => p.oil));
+  // before this pass: steel up to 2.4x and oil up to 2.2x (Command Center 3 has 3 mines and only 2 foundries)
+  check('steel takes at most 1.9x as long as gold to earn', worstSteel <= 1.9, worstSteel.toFixed(2));
+  check('oil takes at most 1.7x as long as gold to earn', worstOil <= 1.7, worstOil.toFixed(2));
+
+  // 7. Campaign: Total War sits between the missions around it instead of jumping past both.
+  const camp = await page.evaluate(() => Object.fromEntries(CAMPAIGN.map(m => [m.id, m.level])));
+  check('Total War is between Long Guns and Last Stand', camp.m11 > camp.m10 && camp.m11 <= (camp.m10 + camp.m12) / 2 + 2, `m10 ${camp.m10}, m11 ${camp.m11}, m12 ${camp.m12}`);
+
+  check('no page errors', !errors.length, errors.slice(0, 3).join(' | '));
+  await browser.close(); srv.close();
+  const failed = results.filter(r => !r.ok).length;
+  console.log(`\n${results.length - failed}/${results.length} checks passed`);
+  process.exit(failed ? 1 : 0);
+})();

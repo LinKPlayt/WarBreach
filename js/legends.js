@@ -294,7 +294,7 @@ function startGauntlet() {
 }
 function gauntletMission(node, stage) {
   const H = hqLevel();
-  const base = Math.round(3 + H * 1.5) + stage * 2 + (node === 'elite' ? 3 : 0) + (node === 'boss' ? 4 : 0);
+  const base = Math.round(GAUNTLET.start[Math.min(H, MAX_HQ)] + stage * GAUNTLET.perStage) + (node === 'elite' ? 3 : 0) + (node === 'boss' ? 4 : 0);
   const nW = node === 'battle' ? 3 : 4, waves = [];
   for (let i = 0; i < nW; i++) {
     const comp = waveComposition(base + i).filter(g => !ENEMIES[g.type].boss && g.count > 0).map(g => ({ type: g.type, count: Math.max(1, Math.round(g.count * GAUNTLET.waveScale)) }));

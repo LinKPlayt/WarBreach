@@ -107,8 +107,8 @@ const DEFS = {
     time: { base: 10, growth: 1.7 },
     hp: { base: 400, growth: 1.25 },
     produces: 'steel',
-    rate: { base: 20, growth: 1.45 },
-    hold: { base: 200, growth: 1.75 },
+    rate: { base: 26, growth: 1.45 },   // steel was the bottleneck: upgrades cost about as much steel as gold
+    hold: { base: 260, growth: 1.75 },
   },
   depot: {
     name: 'Supply Depot', code: 'SD', cat: 'economy', size: 2, max: MAX_LEVEL,
@@ -287,8 +287,8 @@ const DEFS = {
     time: { base: 90, growth: 1.7 },
     hp: { base: 600, growth: 1.25 },
     produces: 'oil',
-    rate: { base: 8, growth: 1.4 },
-    hold: { base: 150, growth: 1.7 },
+    rate: { base: 12, growth: 1.4 },    // levels 9+ cost oil; at 8/min oil took twice as long as gold
+    hold: { base: 225, growth: 1.7 },
   },
   watchtower: {
     name: 'Watchtower', code: 'WT', cat: 'walls', size: 1, max: MAX_LEVEL,
@@ -600,7 +600,7 @@ const CAMPAIGN = [
     brief: 'Artillery trucks are shelling us from beyond the fence. Hunt them with long-range guns and airstrikes.',
     waves: [W('artillery', 2, 'rifleman', 16, 'jeep', 4), W('artillery', 3, 'tank', 3, 'heavy', 4), W('artillery', 4, 'apc', 4, 'flamer', 6, 'medic', 4), W('artillery', 6, 'tank', 5, 'heli', 2, 'rifleman', 20)],
     reward: { gold: 20000, steel: 14000, medals: 16 } },
-  { id: 'm11', name: 'Total War', hq: 7, level: 26, gates: ['w', 'e', 'n'],
+  { id: 'm11', name: 'Total War', hq: 7, level: 20, gates: ['w', 'e', 'n'],
     brief: 'Every unit the enemy has, thrown at us at once. Six waves. No retreat.',
     waves: [W('rifleman', 24, 'grenadier', 8, 'moto', 6), W('jeep', 8, 'sapper', 8, 'flamer', 6, 'medic', 5), W('tank', 5, 'apc', 5, 'heavy', 6, 'drone', 8),
       W('heli', 4, 'drone', 10, 'artillery', 3, 'rifleman', 20), W('tank', 6, 'artillery', 4, 'heavy', 10, 'sapper', 10), W('siege', 1, 'tank', 6, 'heli', 4, 'apc', 6, 'rifleman', 24)],
@@ -1267,7 +1267,11 @@ const KNOWLEDGE = [
 ];
 
 // Gauntlet: the roguelite mode
-const GAUNTLET = { stages: 8, hq: 5, waveScale: 0.4, startCoins: 3, campHeal: 0.35 };
+// start: enemy level of stage 1 for each Command Center level; perStage: how much tougher each
+// later stage gets. The low end used to be a wall (a full Command Center 5 base lost at stage 3);
+// from Command Center 8 the boss stage sits where it always did, so battles do not get longer.
+const GAUNTLET = { stages: 8, hq: 5, waveScale: 0.4, startCoins: 3, campHeal: 0.35, perStage: 1.5,
+  start: [0, 3, 3, 3, 3, 4, 8, 12, 18, 20, 21, 23, 24] };
 const GAUNTLET_NODES = {
   battle: { name: 'Skirmish', desc: 'A standard fight. +3 coins', weight: 5 },
   elite: { name: 'Elite assault', desc: 'Tougher enemies and a Siege Tank. +5 coins, better artifacts', weight: 2 },
