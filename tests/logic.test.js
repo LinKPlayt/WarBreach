@@ -217,11 +217,20 @@ function check(name, ok, detail) { results.push({ name, ok: !!ok, detail }); con
     const after1 = S.buildings.map(b => [b.x, b.y]).join(';');
     const r2 = importLayoutCode(exportLayoutCode());
     const after2 = S.buildings.map(b => [b.x, b.y]).join(';');
+    // codes pasted out of a chat: line breaks, invisible characters, quotes and text around them
+    const v2old = SHARE_PREFIX + btoa(JSON.stringify({ v: MAP_V, b: S.buildings.map(b => [b.type, b.x, b.y]) }));
+    const mess = c => `Here is the code:\n\u200B\u201C${c.replace(/(.{40})/g, '$1\n ')}\u201D\uFEFF thanks`;
+    const shuffle = () => { for (const b of S.buildings) if (b.type !== 'hq') { const sp = nearestFree(b.type, 6, 6); if (sp) { b.x = sp.x; b.y = sp.y; rebuildGrid(); } } };
+    shuffle(); const r3 = importLayoutCode(mess(v2old)); const after3 = S.buildings.map(b => [b.x, b.y]).join(';');
+    const v5 = exportLayoutCode();
+    shuffle(); const r4 = importLayoutCode(mess(v5)); const after4 = S.buildings.map(b => [b.x, b.y]).join(';');
+    const junk = importLayoutCode('hello there');
     const fresh = newBase(), fh = fresh.buildings.find(b => b.type === 'hq');
     return {
       hq: [hqOld.x, hqOld.y], hqTwice: [again.buildings[0].x, again.buildings[0].y], mapV: s.mapV,
       wallIn: inBuildArea(s.buildings[2].x, s.buildings[2].y), obs: [s.obstacles[0].x, s.obstacles[0].y], drop: [s.drop.x, s.drop.y], layout: s.layouts[0].pos[1],
       codeOld: r1.ok && after1 === before, codeNew: r2.ok && after2 === before,
+      messy4: r3.ok && after3 === before, messy5: r4.ok && after4 === before, junk: !junk.ok, len: [v2old.length, v5.length], v5: v5.startsWith('WB5:'),
       freshHq: [fh.x, fh.y], center: [(MAP_W - 3) / 2, (MAP_H - 3) / 2],
     };
   });
@@ -231,6 +240,10 @@ function check(name, ok, detail) { results.push({ name, ok: !!ok, detail }); con
   check('buildings from an old save stay inside the build area', mig.wallIn);
   check('old share codes land where they did on the old map', mig.codeOld);
   check('new share codes round-trip', mig.codeNew);
+  check('new base codes are compact WB5 codes', mig.v5 && mig.len[1] * 2 < mig.len[0], `WB4 ${mig.len[0]} chars, WB5 ${mig.len[1]} chars`);
+  check('a WB4 code pasted with line breaks, quotes, invisible characters and text around it still imports', mig.messy4);
+  check('a WB5 code pasted the same way still imports', mig.messy5);
+  check('text that is not a code is refused', mig.junk);
   check('a new base starts in the middle of the map', Math.abs(mig.freshHq[0] - mig.center[0]) <= 1 && Math.abs(mig.freshHq[1] - mig.center[1]) <= 1, `HQ ${mig.freshHq}, middle ${mig.center}`);
 
   // 10. Gauntlet: late bases face harder enemies, and base damage carries over between battles.

@@ -205,6 +205,7 @@ Found by simulating endless waves at every Command Center level, all 18 campaign
 **Fixes:**
 - Waves could stay open forever: enemies parked just outside the reach of every defense and shelled an outlying building that a Repair Bay kept healing (Artillery Trucks and Stealth Commandos did the same from range). At Command Center 6–8 most waves stalled this way. Now, once a wave has nothing left to send, 30 seconds with no kill and no building destroyed make the remaining attackers charge the Command Center, and anything still alive after 2 more minutes without progress pulls back.
 - An Overtime Shift bought before closing the game now keeps doubling production for the part of it spent away.
+- Base codes could be refused as "not a WarBreach base code" when a long code picked up invisible characters, quotes or line breaks on the way (copying out of a chat on a phone, say). Imports now ignore all of that, and new codes use a compact format (WB5) about a sixth of the old length; WB4 codes still import.
 
 **Balance:**
 - The Gauntlet was a wall at its unlock level (a full Command Center 5 base lost at stage 3) and is now a climb to the Warlord. The first stage starts at enemy level 4 at Command Center 5, and each stage adds 1.5 levels.

@@ -635,19 +635,49 @@ function decorateGear(id) {
 }
 
 /* ================= Layout share codes ================= */
+// Compact codes (WB5, map version 2): "type-XYXY...", one block per building type, joined by dots;
+// every tile coordinate is one character. About a sixth of the length of the older WB4 codes.
+const SHARE_PREFIX5 = 'WB5:';
+const SHARE_XY = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
 function exportLayoutCode() {
-  return SHARE_PREFIX + btoa(JSON.stringify({ v: MAP_V, b: S.buildings.map(b => [b.type, b.x, b.y]) }));
+  const by = {};
+  for (const b of S.buildings) (by[b.type] = by[b.type] || []).push(SHARE_XY[b.x] + SHARE_XY[b.y]);
+  return SHARE_PREFIX5 + Object.entries(by).map(([t, p]) => `${t}-${p.join('')}`).join('.');
+}
+// Reads WB5 and WB4 codes into [[type, x, y], ...]. Forgiving about what comes along when a
+// long code is copied out of a chat: spaces, line breaks, invisible characters, quotes, extra text.
+function parseLayoutCode(raw) {
+  // drop invisible characters, start at the code, stop at a closing quote, then drop line breaks and spaces
+  let text = String(raw || '').replace(/[\u00AD\u180E\u200B-\u200F\u2028-\u202F\u2060-\u206F\uFEFF]/g, '');
+  const start = Math.max(text.toUpperCase().indexOf(SHARE_PREFIX5), text.toUpperCase().indexOf(SHARE_PREFIX));
+  if (start >= 0) { text = text.slice(start); const q = text.search(/[`'"\u201C\u201D\u2018\u2019]/); if (q >= 0) text = text.slice(0, q); }
+  text = text.replace(/\s/g, '');
+  const at5 = text.toUpperCase().indexOf(SHARE_PREFIX5), at4 = text.toUpperCase().indexOf(SHARE_PREFIX);
+  if (at5 >= 0) {
+    const list = [];
+    for (const part of text.slice(at5 + SHARE_PREFIX5.length).split('.')) {
+      const m = /^([a-z]+)-([A-Za-z0-9]*)/.exec(part);
+      if (!m) continue;
+      for (let i = 0; i + 1 < m[2].length; i += 2) list.push([m[1], SHARE_XY.indexOf(m[2][i]), SHARE_XY.indexOf(m[2][i + 1])]);
+    }
+    return list.length ? { ok: true, list } : { ok: false, reason: 'The code is damaged' };
+  }
+  if (at4 >= 0) {
+    let data;
+    try { data = JSON.parse(atob(text.slice(at4 + SHARE_PREFIX.length).replace(/[^A-Za-z0-9+/=]/g, ''))); } catch (e) { return { ok: false, reason: 'The code is damaged. Copy the whole code and try again' }; }
+    if (!data || !Array.isArray(data.b)) return { ok: false, reason: 'The code is damaged' };
+    // codes made before map version 2 come from the smaller map: move them to its middle
+    const sh = data.v === MAP_V ? { x: 0, y: 0 } : MAP_SHIFT_V1;
+    return { ok: true, list: data.b.filter(Array.isArray).map(e => [e[0], e[1] + sh.x, e[2] + sh.y]) };
+  }
+  return { ok: false, reason: 'That is not a WarBreach base code. Base codes start with WB5: or WB4:' };
 }
 function importLayoutCode(code) {
-  code = String(code || '').trim();
-  if (!code.startsWith(SHARE_PREFIX)) return { ok: false, reason: 'That is not a WarBreach base code' };
-  let data;
-  try { data = JSON.parse(atob(code.slice(SHARE_PREFIX.length))); } catch (e) { return { ok: false, reason: 'The code is damaged' }; }
-  if (!data || !Array.isArray(data.b)) return { ok: false, reason: 'The code is damaged' };
+  const parsed = parseLayoutCode(code);
+  if (!parsed.ok) return parsed;
   const pool = {};
-  // codes made before map version 2 come from the smaller map: move them to its middle
-  const sh = data.v === MAP_V ? { x: 0, y: 0 } : MAP_SHIFT_V1;
-  for (const e of data.b) if (Array.isArray(e) && DEFS[e[0]] && Number.isInteger(e[1]) && Number.isInteger(e[2])) (pool[e[0]] = pool[e[0]] || []).push([e[1] + sh.x, e[2] + sh.y]);
+  for (const e of parsed.list) if (DEFS[e[0]] && Number.isInteger(e[1]) && Number.isInteger(e[2]) && e[1] >= 0 && e[2] >= 0) (pool[e[0]] = pool[e[0]] || []).push([e[1], e[2]]);
+  if (!Object.keys(pool).length) return { ok: false, reason: 'The code is damaged' };
   // place buildings one by one on a fresh occupancy map, matching by type in code order
   const occ = new Int32Array(MAP_W * MAP_H);
   const free = (type, x, y) => {
@@ -677,7 +707,7 @@ function importLayoutCode(code) {
     if (!done) return { ok: false, reason: 'Not enough room to fit every building' };
   }
   rebuildGrid(); save();
-  return { ok: true, matched, total: data.b.length };
+  return { ok: true, matched, total: parsed.list.length };
 }
 function openShareCode(back) {
   const code = exportLayoutCode();
@@ -697,7 +727,7 @@ function openImportCode(back) {
     <div class="settings">
       <div class="m-head"><h2>Import a base code</h2></div>
       <p class="lead">Paste a WarBreach base code. Your buildings move to match it by type; anything left over is fitted around them.</p>
-      <textarea class="text-input code-box" rows="4" id="import-code" placeholder="WB4:..."></textarea>
+      <textarea class="text-input code-box" rows="4" id="import-code" placeholder="WB5:..."></textarea>
       <div class="settings-row"><button class="btn" id="btn-apply-code">Apply layout</button><button class="btn ghost" data-close>Back</button></div>
     </div>`, back || null);
   $('#btn-apply-code').addEventListener('click', () => {

@@ -704,6 +704,7 @@ const WHATS_NEW_56 = [
   ['Total War', 'Campaign mission 11 is no longer a big jump over mission 10'],
   ['Steel and oil', 'Steel Foundries make 30% more and Oil Derricks 50% more, so they keep up with gold'],
   ['Overtime Shift', 'Keeps doubling production while the game is closed'],
+  ['Base codes', 'Much shorter, and they import even when pasted with extra spaces, line breaks or quotes. Older codes still work'],
 ];
 // Shows once per update: for 5.0 itself, and again for 5.5 and 5.6 to players who already saw 5.0.
 function maybeShowWhatsNew5() {
