@@ -97,6 +97,11 @@ function migrate(s) {
   if (!Array.isArray(s.challenges)) s.challenges = [];
   if (s.gauntlet && s.gauntlet.active && !(Number.isInteger(s.gauntlet.stage) && Array.isArray(s.gauntlet.arts))) s.gauntlet = { active: false };
   if (!s.winStreak) s.winStreak = { n: 0, best: 0 };
+  // Update 7.0
+  for (const b of s.buildings) if (b.ammo && !AMMO[b.ammo]) delete b.ammo;
+  if (!s.strike || typeof s.strike !== 'object' || !Number.isInteger(s.strike.best) || s.strike.best < 0) s.strike = { best: 0 };
+  if (s.expeditions && (typeof s.expeditions !== 'object' || !Array.isArray(s.expeditions.active))) s.expeditions = null;
+  if (s.expeditions) s.expeditions.active = s.expeditions.active.filter(e => e && EXPEDITION_TYPES.some(t => t.id === e.id) && Number.isFinite(e.end) && e.party && Object.keys(e.party).every(t => TROOPS[t] && Number.isInteger(e.party[t]) && e.party[t] > 0));
   return s;
 }
 
@@ -1108,8 +1113,9 @@ function statChips(b) {
       out.push(`<button class="chip chip-btn" data-act="priority"><b>TARGET</b>${pr.name}</button>`);
       if (S.buildings.some(o => o !== b && o.type === b.type && o.level >= 1 && (o.priority || 'close') !== (b.priority || 'close'))) out.push(`<button class="chip chip-btn chip-mini" data-act="priority-all" title="Use this target for every ${d.name}" aria-label="Use this target for every ${d.name}"><b>ALL</b></button>`);
       if (b.spec) out.push(`<span class="chip spec-chip" style="--sc:${SPECS[b.spec].color}"><b>SPEC</b>${SPECS[b.spec].name}</span>`);
-      else if (b.level >= SPEC_LEVEL) out.push(`<button class="chip chip-btn spec-ready" data-act="spec"><b>NEW</b>Choose specialization</button>`);
+      else if (b.level >= SPEC_LEVEL) out.push(`<button class="chip chip-btn spec-ready" data-act="spec"><b>NEW</b>Specialize</button>`);
       else out.push(`<span class="chip"><b>SPEC</b>at level ${SPEC_LEVEL}</span>`);
+      if (ammoAvailable(b)) out.push(`<button class="chip chip-btn" data-act="ammo" style="--sc:${(AMMO[b.ammo] || AMMO.standard).color}"><b>AMMO</b>${(AMMO[b.ammo] || AMMO.standard).chip}</button>`);
     }
   }
   out.push(stormChips(b, L, nxt ? L + 1 : null));
@@ -1236,6 +1242,7 @@ panel.addEventListener('click', e => {
   else if (act === 'paragon') { const ps = paragonStatus(b); if (ps.ok) paragonArmed = true; else { if (ps.reason) toast(ps.reason, 'bad'); Sound.play('error'); } }
   else if (act === 'paragon-confirm') { paragonArmed = false; if (makeParagon(b)) select(b.id); }
   else if (act === 'spec') { openSpec(b); return; }
+  else if (act === 'ammo') { openAmmo(b); return; }
   else if (act === 'priority') {
     const i = PRIORITIES.findIndex(p => p.id === (b.priority || 'close'));
     b.priority = PRIORITIES[(i + 1) % PRIORITIES.length].id;

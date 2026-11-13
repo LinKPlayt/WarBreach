@@ -256,6 +256,7 @@ function battleUpdate(dt) {
   stormBattleUpdate(dt);
   warBattleUpdate(dt);
   legendsBattleUpdate(dt);
+  offensiveBattleUpdate(dt);
 
   if (B.phase === 'break') {
     B.breakT -= dt;
@@ -318,6 +319,7 @@ function battleUpdate(dt) {
  */
 const STRAGGLER = { charge: 30, retreat: 120 };
 function updateStragglers(dt) {
+  if (B.units.some(u => ENEMIES[u.type].camp)) { B.lastT = 0; return; } // a Counteroffensive ends when its camps fall
   B.lastT = (B.lastT || 0) + dt; // reset by kills and destroyed buildings
   if (B.lastT < STRAGGLER.charge) return;
   if (!B.charging) { B.charging = true; banner('Stragglers charging', 'The last attackers are rushing the Command Center'); }
@@ -587,7 +589,10 @@ function sapperBlast(u, e) {
 function damageEnemy(u, dmg, src) {
   if (u.hp <= 0) return;
   const ed = ENEMIES[u.type];
-  if (ed.armor) dmg = Math.max(dmg * 0.25, dmg - ed.armor);
+  // special ammunition from the defense that fired (burn ticks arrive with no shooter)
+  const ammo = SHOOTER && SHOOTER.ammo && src === SHOOTER.type ? AMMO[SHOOTER.ammo] : null;
+  if (ed.armor && !(ammo && ammo.pierce)) dmg = Math.max(dmg * 0.25, dmg - ed.armor);
+  if (ammo) dmg = applyAmmo(u, ed, dmg, ammo, src);
   if (u.air && B.bonus && B.bonus.antiAir) dmg *= 1 + B.bonus.antiAir;
   dmg = stormDamageMod(u, ed, dmg, src);
   if (src) B.dmgBy[src] = (B.dmgBy[src] || 0) + Math.min(dmg, u.hp);
@@ -746,6 +751,7 @@ function updateDefense(b, dt) {
     if (u.hp <= 0) return false;
     if (w.targets === 'air' ? !u.air : (u.air && w.targets !== 'both')) return false;
     if (ENEMIES[u.type].stealth && !u.revealed) return false;
+    if (ENEMIES[u.type].camp) return false; // siege camps are a job for troops, not guns
     const d = Math.hypot(u.x - c.x, u.y - c.y) / TILE;
     return d <= w.range && d >= (w.minRange || 0);
   };
@@ -1568,7 +1574,7 @@ function shakeOffset(dt) {
 
 /* ---------------- Enemy field guide ---------------- */
 function openFieldGuide(back) {
-  const types = Object.keys(ENEMIES).sort((a, b) => firstWaveOf(a) - firstWaveOf(b));
+  const types = Object.keys(ENEMIES).filter(t => !ENEMIES[t].camp).sort((a, b) => firstWaveOf(a) - firstWaveOf(b));
   const best = S.bestWave || 0;
   const cards = types.map(t => {
     const e = ENEMIES[t], w = firstWaveOf(t);

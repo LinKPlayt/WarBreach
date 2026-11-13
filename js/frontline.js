@@ -426,7 +426,7 @@ function showSurpriseReport() {
 /* ---------------- Firing Range ---------------- */
 let rangePick = {};
 function openFiringRange() {
-  const types = Object.keys(ENEMIES).filter(t => !ENEMIES[t].raidBoss);
+  const types = Object.keys(ENEMIES).filter(t => !ENEMIES[t].raidBoss && !ENEMIES[t].camp);
   const rows = types.map(t => `<div class="fr"><span class="fr-art" data-type="${t}"></span><span class="fr-name">${ENEMIES[t].name}</span>
     <button class="fr-b" data-fr="${t}" data-d="-1">-</button><b class="fr-n">${rangePick[t] || 0}</b><button class="fr-b" data-fr="${t}" data-d="1">+</button></div>`).join('');
   openModal(`

@@ -1233,7 +1233,7 @@ const UPDATE55_VERSION = '5.5';
 const UPDATE56_VERSION = '5.6';
 // Build of these files. Must match version.json and the ?v= on every script and stylesheet in
 // index.html (tests/logic.test.js checks); bump all three together for every release.
-const BUILD = '6.0.1';
+const BUILD = '7.0.0';
 
 Object.assign(DEFS, {
   vengeance: {
@@ -1403,3 +1403,51 @@ const BLUEPRINTS = [
   { id: 'bastion', name: 'Bastion', desc: 'Economy and storage in the middle, every gun on the outside where it meets the enemy first.', order: ['econ', 'aura', 'long', 'short'] },
   { id: 'balanced', name: 'Balanced', desc: 'Guns, support and economy mixed evenly, so every side of the base looks the same.', order: ['mixed'] },
 ];
+
+/* =================== Update 7.0: Counterstrike =================== */
+const UPDATE7_VERSION = '7.0';
+
+// Counteroffensive: the enemy digs in three siege camps at the ends of the roads. Base defenses
+// barely scratch them; your troops, hero and abilities have to go out and destroy them.
+ENEMIES.camp = { name: 'Siege Camp', hp: 5200, speed: 0, dmg: 28, rate: 2, range: 4.2, bounty: 120, r: 24, vehicle: true, camp: true };
+ENEMY_NOTES.camp = 'A dug-in enemy camp that keeps sending squads at your base. Base defenses do a tenth of their damage to it: send troops, your hero or an airstrike.';
+const STRIKE = { hq: 4, waveScale: 0.35, firstSpawn: 14, spawnEvery: 22, squad: 2, squadMax: 9, defenseDmg: 0.1, replay: 0.25 };
+function strikeLevel(sector) { return 1 + sector * 2; }
+function strikeReward(sector, first) {
+  const k = first ? 1 : STRIKE.replay;
+  return { medals: Math.max(1, Math.round(Math.min(30, 4 + sector * 2) * k)), share: Math.min(0.3, 0.06 + 0.02 * sector) * k };
+}
+
+// Special ammunition: one type per defense from level 3, once an Ammo Bunker stands.
+const AMMO_LEVEL = 3;
+const AMMO_BURN_TIME = 2.5; // seconds a burn takes to deal its damage
+const AMMO = {
+  standard:   { name: 'Standard rounds', short: 'Standard', chip: 'Std', color: '#a6a58a', desc: 'No bonus, no penalty.' },
+  incendiary: { name: 'Incendiary', short: 'Incendiary', chip: 'Fire', color: '#ff8a3a', desc: 'Targets burn for another 25% of every hit over 2.5 seconds.', burn: 0.25 },
+  ap:         { name: 'Armor-piercing', short: 'AP', chip: 'AP', color: '#c9d4dc', desc: 'Ignores armor. +30% damage to vehicles and bosses, -15% to infantry.', pierce: true, vehicle: 1.3, infantry: 0.85 },
+  cryo:       { name: 'Cryo', short: 'Cryo', chip: 'Cryo', color: '#7fd4ff', desc: '-5% damage. Targets move 30% slower for 2.5 seconds (bosses 15%).', hit: 0.95, chill: 0.3, chillTime: 2.5 },
+};
+function ammoCost(type, level) { const c = costFor(type, Math.max(1, level)); return { gold: Math.round(c.gold * 0.25 / 10) * 10, steel: Math.round(c.steel * 0.25 / 10) * 10 }; }
+
+// Expeditions: send troops away on timed missions. Rewards are shares of your storage.
+const EXPEDITIONS = { hq: 3, offers: 3, medicRisk: 0.75 };
+function expeditionSlots(hqL) { return hqL >= 9 ? 3 : hqL >= 6 ? 2 : 1; }
+const EXPEDITION_TYPES = [
+  { id: 'patrol',  name: 'Border Patrol',     hours: 0.5, space: 4,  risk: 0.05, reward: { gold: 0.05 }, desc: 'A sweep of the outer roads.' },
+  { id: 'convoy',  name: 'Convoy Escort',     hours: 1,   space: 6,  risk: 0.08, reward: { steel: 0.07 }, desc: 'Guard a steel convoy through the hills.' },
+  { id: 'salvage', name: 'Salvage Run',       hours: 2,   space: 8,  risk: 0.10, reward: { gold: 0.06, steel: 0.06 }, desc: 'Strip the wrecks of an old battlefield.' },
+  { id: 'recon',   name: 'Deep Recon',        hours: 3,   space: 8,  risk: 0.12, reward: { medals: 5, gold: 0.04 }, desc: 'Map the enemy lines. Command pays in medals.' },
+  { id: 'oil',     name: 'Oil Field Raid',    hours: 4,   space: 12, risk: 0.15, reward: { oil: 0.10, steel: 0.05 }, hq: 5, desc: 'Hit a pumping station and bring back the drums.' },
+  { id: 'depot',   name: 'Supply Depot Raid', hours: 6,   space: 16, risk: 0.18, reward: { gold: 0.15, steel: 0.15, medals: 6 }, desc: 'A long march to a fat target.' },
+  { id: 'vault',   name: "Warlord's Vault",   hours: 8,   space: 20, risk: 0.22, reward: { gold: 0.20, steel: 0.20, medals: 10, gear: 0.5 }, hq: 6, desc: 'Break into a warlord\'s strongroom. Half a chance of hero gear.' },
+];
+
+MISSIONS.push(
+  { id: 'strike1', text: 'Win a Counteroffensive', progress: s => [(s.strike && s.strike.best) || 0, 1], reward: { medals: 15 } },
+  { id: 'ammo1', text: 'Fit special ammunition to a defense', progress: s => [s.buildings.filter(b => b.ammo && b.ammo !== 'standard').length, 1], reward: { steel: 2000 } },
+  { id: 'exp3', text: 'Complete 3 expeditions', progress: s => [s.stats.expeditions || 0, 3], reward: { medals: 12 } },
+);
+ACHIEVEMENTS.push(
+  { id: 'strikes', name: 'Spearhead', stat: s => (s.strike && s.strike.best) || 0, tiers: [3, 10, 20], medals: [10, 25, 60], unit: 'Counteroffensive sectors cleared' },
+  { id: 'expeditions', name: 'Pathfinder', stat: s => s.stats.expeditions || 0, tiers: [5, 30, 100], medals: [5, 15, 40], unit: 'expeditions completed' },
+);

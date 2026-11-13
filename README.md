@@ -196,6 +196,17 @@ Then Sgt. Vance runs an 18-step guided tutorial with a spotlight on what to tap:
 - Skip it any time (two taps), and replay the tutorial or the intro from **Settings > Data**.
 - Returning players never see it. Players who were part-way through the old four hints get the new tutorial without the intro.
 
+## Update 7.0: Counterstrike
+
+Three major features. The plan and results are in [docs/update-7.0-plan.md](docs/update-7.0-plan.md).
+
+**Counteroffensive** (Command Center 4): an attack mode. The enemy digs in three Siege Camps at the ends of the roads and keeps sending squads at your base. Base guns never target a camp and do a tenth of their damage to it, so you deploy troops beside the camps, walk your hero over and call airstrikes. Destroy all three to win. Endless sectors, each tougher and better paid; replays pay a quarter.
+**Special ammunition** (needs an Ammo Bunker, defenses from level 3): Incendiary (targets burn for another 25% of every hit), Armor-piercing (ignores armor, +30% to vehicles and bosses, -15% to infantry) and Cryo (-5% damage, targets 30% slower). Tap AMMO on a defense; one tap loads a type into every defense of that type.
+**Expeditions** (Command Center 3): send troops from the Barracks on missions of 30 minutes to 8 hours for gold, steel, oil, medals and hero gear. Three orders a day; up to three parties out at once; a Combat Medic lowers the risk; parties can be recalled.
+Also three missions and two achievements for the new modes.
+
+In simulated endless battles at Command Center 7, ammunition matched to each gun survived 37.6 waves on average against 32.8 on standard rounds. Every rule has a logic check (94 in `tests/logic.test.js`), and the battle soak, Gauntlet run, UI fuzzing, phone layout checks and an end-to-end Counteroffensive pass.
+
 ## Update 6.0: Overhaul
 
 Planned from what the 5.6 simulations showed: the same buildings survived anywhere from 16 to 37 waves depending only on the layout, and waves stalled on buildings no defense could reach. The plan and results are in [docs/update-6.0-plan.md](docs/update-6.0-plan.md).
@@ -245,6 +256,7 @@ Found by simulating endless waves at every Command Center level, all 18 campaign
 - `js/settings.js` – main menu and the tabbed Settings screen
 - `js/warlords.js` – Update 4.0: weather, morale, Sentry Gun, Drone Hangar, new enemies, Maj. Kade, Shield Trooper, checkpoints, forecast, Vault, Trading Post, mastery, leagues, gear upgrades, share codes, Intel feed, undo-sell
 - `js/tutorial.js` – the first-launch intro and the guided tutorial (Sgt. Vance)
+- `js/offensive.js` – Update 7.0: the Counteroffensive mode and Siege Camps, special ammunition (burns and chills), Expeditions
 - `js/overhaul.js` – Update 6.0: Blueprints (layout planner), Base Inspector, Upgrade Advisor, Weekly contracts, upgrade-all, and the battle hooks for the 6.0 research, field upgrades and Apocalypse threat
 - `js/legends.js` – Update 5.0: the Gauntlet, Paragons, Challenge Editor, Commander Knowledge, Vengeance Tower, Decoy Beacon, army presets, Field Album, win streaks, Weekend Blitz, welcome-back report
 - `js/game.js` – state, saving, placement, input, HUD and main loop

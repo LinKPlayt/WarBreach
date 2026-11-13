@@ -363,7 +363,7 @@ function check(name, ok, detail) { results.push({ name, ok: !!ok, detail }); con
   check('one tap sets a targeting priority for every defense of that type', u6.priorityAll);
   check('the build queue grows with the Command Center (3, 4, 5, 6)', u6.queue.join() === '4,4,5,6' || u6.queue.join() === '3,4,5,6', u6.queue.join());
   check('Apocalypse threat exists and records its best wave', u6.apocalypse && u6.apBest === 7, `best ${u6.apBest}`);
-  check('29 missions, all with valid progress', u6.missions === 29 && u6.missionsOk, `${u6.missions}`);
+  check('32 missions, all with valid progress', u6.missions === 32 && u6.missionsOk, `${u6.missions}`);
   check('achievements include the three new ones and all compute', u6.achOk);
   check('17 field upgrade cards and 24 unique Gauntlet artifacts', u6.cards === 17 && u6.arts === 24, `${u6.cards} cards, ${u6.arts} artifacts`);
 
@@ -446,6 +446,137 @@ function check(name, ok, detail) { results.push({ name, ok: !!ok, detail }); con
   check('the Base Inspector warns about an open road, and only then', u6b.openRoad && u6b.closedNoWarning);
   check('every blueprint places every building inside the area, off obstacles, without overlaps', u6b.bp.filter(r => r[1] !== 'undo').every(r => r[2]), u6b.bp.filter(r => !r[2]).map(r => r.join(' ')).join(', '));
   check('applying a blueprint closes the ring, and undo restores the old layout', u6b.bp.filter(r => r[1] === 'undo').every(r => r[2]));
+
+  // 14. Update 7.0: Counteroffensive
+  const u7 = await page.evaluate(() => {
+    const o = {};
+    const fresh = L => { if (B) { B.over = true; leaveBattle(); } closeModal(); T.base(L); S.obstacles = []; rebuildGrid(); S.gold = S.steel = S.oil = 0; S.medals = 100; army().troops = {}; army().queue = []; S.strike = { best: 0 }; };
+    fresh(6);
+    const m = strikeMission(1);
+    o.mission = m.strike && m.waves.length === 1 && m.waves[0].length > 0 && m.waves[0].every(g => campCanSend(g.type));
+    o.listsSkipCamp = !cleanChallenge({ types: ['camp', 'rifleman'] }).types.includes('camp');
+    startBattle(m); B.hero = null; B.weather = WEATHER.find(w => w.id === 'clear'); B.breakT = 0; battleUpdate(0.01);
+    B.queue = []; B.units = B.units.filter(u => ENEMIES[u.type].camp);
+    const camps = B.units.slice();
+    o.camps = camps.length; o.campHp = camps.every(c => c.hp === campHp(m.level) && !c.elite);
+    o.outside = camps.every(c => !inBuildArea(Math.floor(c.x / TILE), Math.floor(c.y / TILE)));
+    // guns ignore camps and do a tenth of their damage to them
+    const c = camps[0], home = { x: c.x, y: c.y }, mg = S.buildings.find(b => b.type === 'mg'), mc = centerOf(mg);
+    c.x = mc.x + 40; c.y = mc.y; mg._tgt = null; mg._rt = 0; mg._cd = 1; updateDefense(mg, 0.01); o.ignored = mg._tgt !== c;
+    c.x = home.x; c.y = home.y;
+    SHOOTER = null; let h0 = c.hp; damageEnemy(c, 1000, 'mg'); o.gunDmg = h0 - c.hp; h0 = c.hp; damageEnemy(c, 1000, 'troops'); o.troopDmg = h0 - c.hp;
+    // the garrison shoots troops that come close, and squads keep coming; no straggler charge while camps stand
+    const tr = spawnTroop('rifle', c.x + 60, c.y, false, 0); tr.hp = tr.max = 1e6;
+    T.run(3); o.shot = tr.hp < tr.max; B.troops = [];
+    T.run(STRIKE.firstSpawn + 30); o.squads = B.campSpawns; o.noCharge = !B.charging;
+    // destroy the camps: victory, reward once in full and a quarter on replays
+    const med0 = S.medals;
+    for (const k of camps) damageEnemy(k, 1e9, 'troops');
+    o.campsLeft = B.campsLeft; o.campStat = S.stats.camps;
+    for (const u of B.units) u.hp = 0; B.units = []; T.run(1); o.phase = B.phase;
+    endBattle('victory');
+    o.best = S.strike.best; o.medals = S.medals - med0; o.firstMedals = strikeReward(1, true).medals; o.replayMedals = strikeReward(1, false).medals; o.gold = S.gold;
+    o.report = document.querySelector('#modal-body').innerText.includes('Camps destroyed');
+    closeModal(); if (B) { B.over = true; leaveBattle(); } closeModal();
+    // a defeat pays nothing
+    startBattle(strikeMission(2)); B.breakT = 0; battleUpdate(0.01); const med1 = S.medals; endBattle('defeat'); o.lossPays = S.medals - med1; o.bestAfterLoss = S.strike.best;
+    closeModal(); if (B) { B.over = true; leaveBattle(); } closeModal();
+    o.levels = [1, 5, 10].map(strikeLevel);
+    return o;
+  });
+  check('a Counteroffensive is one assault wave with no bosses, and camps stay out of enemy pickers', u7.mission && u7.listsSkipCamp);
+  check('three siege camps stand outside the base at full health', u7.camps === 3 && u7.campHp && u7.outside);
+  check('base guns never target a camp and do a tenth of their damage to it', u7.ignored && Math.abs(u7.gunDmg - 100) < 1 && Math.abs(u7.troopDmg - 1000) < 1, `gun ${u7.gunDmg}, troops ${u7.troopDmg}`);
+  check('a camp shoots troops that come close and keeps sending squads', u7.shot && u7.squads >= 3, `${u7.squads} squads`);
+  check('stragglers never charge while a camp stands', u7.noCharge);
+  check('destroying all three camps wins the battle', u7.campsLeft === 0 && u7.campStat === 3 && u7.phase === 'won' && u7.report);
+  check('a win records the sector and pays medals and resources; replays pay a quarter', u7.best === 1 && u7.medals === u7.firstMedals && u7.gold > 0 && u7.replayMedals < u7.firstMedals, `+${u7.medals} medals, replay ${u7.replayMedals}`);
+  check('a lost Counteroffensive pays nothing and keeps the best sector', u7.lossPays === 0 && u7.bestAfterLoss === 1);
+
+  // 15. Update 7.0: special ammunition
+  const am = await page.evaluate(() => {
+    const o = {};
+    const fresh = L => { if (B) { B.over = true; leaveBattle(); } closeModal(); T.base(L); S.obstacles = []; rebuildGrid(); S.gold = S.steel = 1e6; };
+    fresh(6);
+    const mg = S.buildings.find(b => b.type === 'mg');
+    const bunkers = S.buildings.filter(b => b.type === 'ammo');
+    o.available = ammoAvailable(mg) && !ammoAvailable(hq());
+    mg.level = 2; o.lowLevel = !ammoAvailable(mg); mg.level = 6;
+    S.buildings = S.buildings.filter(b => b.type !== 'ammo'); o.noBunker = !ammoAvailable(mg); S.buildings.push(...bunkers); rebuildGrid();
+    const g0 = S.gold, c = ammoCost('mg', 6); setAmmo(mg, 'incendiary'); o.paid = g0 - S.gold === c.gold && c.gold > 0 && mg.ammo === 'incendiary';
+    const g1 = S.gold; setAmmo(mg, 'standard'); o.standardFree = S.gold === g1 && !mg.ammo;
+    S.gold = 0; S.steel = 0; o.cantAfford = !setAmmo(mg, 'cryo') && !mg.ammo; S.gold = S.steel = 1e6;
+    startBattle(null); B.hero = null; B.weather = WEATHER.find(w => w.id === 'clear'); B.breakT = 0; battleUpdate(0.01); B.queue = []; B.units = [];
+    const unit = type => { B.units = []; spawnEnemy(type); const u = B.units[0]; u.elite = false; u.hp = u.max = 1e6; u.x = 2 * TILE; u.y = 2 * TILE; return u; };
+    const hit = (type, ammo, dmg) => { const u = unit(type); if (ammo === 'standard') delete mg.ammo; else mg.ammo = ammo; SHOOTER = mg; damageEnemy(u, dmg, 'mg'); SHOOTER = null; return { u, d: 1e6 - u.hp }; };
+    o.std = hit('tank', 'standard', 100).d;
+    const inc = hit('tank', 'incendiary', 100); o.incHit = inc.d; o.incPool = inc.u.burn;
+    for (let i = 0; i < 100; i++) offensiveBattleUpdate(0.1); o.incTotal = 1e6 - inc.u.hp; o.burnEnds = inc.u.burn === 0;
+    o.apVehicle = hit('tank', 'ap', 100).d; o.apInfantry = hit('rifleman', 'ap', 100).d;
+    o.heavyStd = hit('heavy', 'standard', 10).d; o.heavyAp = hit('heavy', 'ap', 10).d;
+    const walk = (type, ammo) => { const u = hit(type, ammo, 10).u; u.retarget = 99; u.tgt = null; const x0 = u.x, y0 = u.y; for (let i = 0; i < 20; i++) updateEnemy(u, 0.05); return Math.hypot(u.x - x0, u.y - y0); };
+    o.cryoHit = hit('tank', 'cryo', 100).d;
+    o.chill = walk('rifleman', 'cryo') / walk('rifleman', 'standard'); o.chillBoss = walk('siege', 'cryo') / walk('siege', 'standard');
+    const cu = hit('rifleman', 'cryo', 10).u; for (let i = 0; i < 30; i++) offensiveBattleUpdate(0.1); o.chillEnds = !(cu.chillT > 0);
+    delete mg.ammo; B.over = true; leaveBattle(); closeModal();
+    mg.ammo = 'ap'; o.typeAll = setAmmoForType('mg', 'ap') === S.buildings.filter(b => b.type === 'mg').length - 1 && S.buildings.filter(b => b.type === 'mg').every(b => b.ammo === 'ap');
+    mg.ammo = 'bogus'; const s2 = load(serialize()); o.migrate = !s2.buildings.find(b => b.id === mg.id).ammo && s2.buildings.filter(b => b.type === 'mg' && b.ammo === 'ap').length >= 1;
+    select(mg.id); mg.ammo = 'ap'; refreshPanel(true); o.chip = !!document.querySelector('#panel [data-act="ammo"]'); select(null);
+    return o;
+  });
+  const near2 = (x, y, tol = 0.02) => Math.abs(x - y) <= tol * Math.max(1, Math.abs(y));
+  check('ammunition needs an Ammo Bunker, level 3 and a real gun', am.available && am.lowLevel && am.noBunker);
+  check('loading ammunition costs resources; standard rounds are free; no change without the resources', am.paid && am.standardFree && am.cantAfford);
+  check('Incendiary: the full hit plus a burn of 25% of it', near2(am.incHit, 100) && near2(am.incPool, 25) && near2(am.incTotal, 125) && am.burnEnds, `hit ${am.incHit}, total ${am.incTotal.toFixed(1)}`);
+  check('Armor-piercing: +30% to vehicles, -15% to infantry, ignores armor', near2(am.apVehicle, 130) && near2(am.apInfantry, 85) && near2(am.heavyStd, 2.5) && near2(am.heavyAp, 8.5), `vehicle ${am.apVehicle}, infantry ${am.apInfantry}, armored ${am.heavyStd} -> ${am.heavyAp}`);
+  check('Cryo: 95% damage and a 30% slow (15% on bosses) that wears off', near2(am.cryoHit, 95) && near2(am.chill, 0.7, 0.03) && near2(am.chillBoss, 0.85, 0.03) && am.chillEnds, `x${am.chill.toFixed(2)}, boss x${am.chillBoss.toFixed(2)}`);
+  check('one tap loads an ammunition type into every defense of the type', am.typeAll);
+  check('unknown ammunition is dropped from a save and the panel shows the AMMO chip', am.migrate && am.chip);
+
+  // 16. Update 7.0: Expeditions
+  const ex = await page.evaluate(() => {
+    const o = {};
+    const fresh = L => { if (B) { B.over = true; leaveBattle(); } closeModal(); T.base(L); S.obstacles = []; rebuildGrid(); S.gold = S.steel = S.oil = 0; S.medals = 0; army().queue = []; S.expeditions = null; };
+    fresh(6);
+    army().troops = { rifle: 6, gunner: 3, medic: 1, tank: 1 };
+    const X = expState();
+    o.offers = X.offers.length === 3 && new Set(X.offers.map(x => x.id)).size === 3 && X.offers.every(x => (expType(x.id).hq || 0) <= 6);
+    o.stable = JSON.stringify(expState().offers) === JSON.stringify(X.offers);
+    X.offers = [{ id: 'patrol', taken: false }, { id: 'salvage', taken: false }, { id: 'vault', taken: false }];
+    o.party = JSON.stringify(expeditionParty(expType('patrol')).party);
+    o.bigParty = !!expeditionParty(expType('vault')).party.tank;
+    o.slots = [3, 6, 9].map(expeditionSlots).join();
+    const space0 = armySpace();
+    o.sent = sendExpedition(0) && troopCount('rifle') === 2 && armySpace() === space0 && X.offers[0].taken;
+    o.twice = !sendExpedition(0);
+    o.second = sendExpedition(1); o.third = !sendExpedition(2); // two parties at Command Center 6
+    o.early = claimExpedition(0) === null;
+    const rnd = Math.random;
+    X.active[0].end = Date.now() - 1; Math.random = () => 0.99; const a = claimExpedition(0); o.safe = a && a.back === 4 && a.lost === 0 && a.gold > 0 && troopCount('rifle') === 4;
+    X.active[0].end = Date.now() - 1; Math.random = () => 0; const b = claimExpedition(0); Math.random = rnd; o.wiped = b && b.back === 0 && b.lost === 5 && armySpace() < space0;
+    o.stat = S.stats.expeditions; o.none = X.active.length === 0;
+    o.medic = expRisk(expType('depot'), { medic: 1 }) / expRisk(expType('depot'), { rifle: 3 });
+    // a new day brings new orders; a recalled party comes home with nothing
+    X.day = 'old'; const Y = expState(); o.reset = Y.offers.every(x => !x.taken);
+    army().troops = { rifle: 12 }; Y.offers = [{ id: 'convoy', taken: false }]; const g0 = S.gold + S.steel;
+    sendExpedition(0); const n = recallExpedition(0); o.recall = n === 6 && troopCount('rifle') === 12 && Y.active.length === 0 && S.gold + S.steel === g0;
+    // saves keep a party in the field and drop a broken one
+    Y.offers = [{ id: 'patrol', taken: false }]; sendExpedition(0);
+    const s2 = load(serialize()); o.saved = s2.expeditions.active.length === 1;
+    Y.active.push({ id: 'patrol', start: 0, end: 1, party: { ghost: 2 } }); const s3 = load(serialize()); o.cleaned = s3.expeditions.active.length === 1;
+    Y.active.length = 1;
+    fresh(2); o.locked = !expeditionStatus(0).ok;
+    return o;
+  });
+  check('three different expedition orders a day, the same all day', ex.offers && ex.stable);
+  check('the cheapest troops go first and big jobs take the heavy units', ex.party === '{"rifle":4}' && ex.bigParty);
+  check('a party leaves the Barracks but keeps its bunks; an order can be sent once', ex.sent && ex.twice);
+  check('parties are limited by Command Center level (1, 2, 3)', ex.second && ex.third && ex.slots === '1,2,3');
+  check('an expedition pays out only when it is over; survivors come home', ex.early && ex.safe);
+  check('lost troops do not come back and free their bunks', ex.wiped && ex.stat === 2 && ex.none);
+  check('a Combat Medic cuts the risk by a quarter', Math.abs(ex.medic - 0.75) < 1e-9);
+  check('orders reset with the day; a recalled party returns with no reward', ex.reset && ex.recall);
+  check('saves keep parties in the field and drop broken ones; locked before Command Center 3', ex.saved && ex.cleaned && ex.locked);
 
   check('no page errors', !errors.length, errors.slice(0, 3).join(' | '));
   await browser.close(); srv.close();

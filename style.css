@@ -1417,3 +1417,11 @@ body.coach-top #toasts { top: var(--coach-bottom) !important; }
 @media (max-height: 500px) { .bp-map { width: min(300px, 100%); } .bp-legend { grid-template-columns: 1fr 1fr; } }
 .chip.chip-mini { padding-left: 7px; padding-right: 7px; }
 .chip.chip-mini b { margin: 0; }
+
+/* ---------- Update 7.0: Counteroffensive, ammunition, Expeditions ---------- */
+.sector-row { justify-content: center; align-items: center; gap: 14px; }
+.sector-n { font-family: "Black Ops One", Impact, sans-serif; font-size: 18px; letter-spacing: 0.04em; min-width: 110px; text-align: center; }
+.spec-opt.on { outline: 2px solid var(--sc); outline-offset: -2px; }
+.spec-row.ammo-row { grid-template-columns: 1fr 1fr; }
+.ammo-row .spec-opt { padding-top: 8px; padding-bottom: 8px; gap: 3px; }
+.ammo-row .spec-gem { width: 18px; height: 18px; }

@@ -479,7 +479,7 @@ const CH_RULES = [['fast', 'Blitz'], ['armored', 'Hardened'], ['noair', 'No airs
 function challenges() { if (!Array.isArray(S.challenges)) S.challenges = []; return S.challenges; }
 function cleanChallenge(c) {
   if (!c || typeof c !== 'object') return null;
-  const types = (Array.isArray(c.types) ? c.types : []).filter(t => ENEMIES[t] && !ENEMIES[t].raidBoss).slice(0, 12);
+  const types = (Array.isArray(c.types) ? c.types : []).filter(t => ENEMIES[t] && !ENEMIES[t].raidBoss && !ENEMIES[t].camp).slice(0, 12);
   if (!types.length) return null;
   return {
     name: String(c.name || 'Custom challenge').replace(/[<>]/g, '').slice(0, 28) || 'Custom challenge',
@@ -558,7 +558,7 @@ function openChallenges(back) {
 }
 function openChallengeEditor(back) {
   const c = chDraft;
-  const types = Object.keys(ENEMIES).filter(t => !ENEMIES[t].raidBoss);
+  const types = Object.keys(ENEMIES).filter(t => !ENEMIES[t].raidBoss && !ENEMIES[t].camp);
   openModal(`
     <div class="settings">
       <div class="m-head"><h2>Edit challenge</h2></div>
@@ -599,7 +599,7 @@ function openChallengeEditor(back) {
 /* ================= Field Album ================= */
 function albumPages() {
   const kills = S.stats.killsBy || {};
-  const enemyTypes = Object.keys(ENEMIES).filter(t => !ENEMIES[t].raidBoss && !ENEMIES[t].boss);
+  const enemyTypes = Object.keys(ENEMIES).filter(t => !ENEMIES[t].raidBoss && !ENEMIES[t].boss && !ENEMIES[t].camp);
   const defTypes = Object.keys(DEFS).filter(t => DEFS[t].dmg && !DEFS[t].trap && t !== 'hq');
   const best = t => S.buildings.filter(b => b.type === t).reduce((m, b) => Math.max(m, b.level), 0);
   const weathers = S.stats.weathers || {}, times = S.stats.daytimes || {};
@@ -703,6 +703,12 @@ const WHATS_NEW_55 = [
   ['Building panel', 'Costs wrap instead of being cut off, and the panel no longer covers the Campaign button'],
   ['Boss Raid', 'The time-up message names the right boss'],
 ];
+const WHATS_NEW_7 = [
+  ['Counteroffensive', 'A new attack mode (Command Center 4). The enemy digs in three siege camps at the ends of the roads; your guns barely scratch them, so send your troops, hero and airstrikes out to destroy them. Endless sectors, each tougher and better paid'],
+  ['Special ammunition', 'With an Ammo Bunker, any defense from level 3 can load Incendiary (burning), Armor-piercing (vehicles and bosses) or Cryo (slows) rounds. Tap AMMO on a defense'],
+  ['Expeditions', 'Send troops from the Barracks on missions of 30 minutes to 8 hours for gold, steel, oil, medals and hero gear (Command Center 3). Three new orders every day'],
+  ['More goals', 'Three missions and two achievements for the new modes'],
+];
 const WHATS_NEW_6 = [
   ['Blueprints', 'One tap lays out your whole base: Fortress, Bastion or Balanced, planned for the buildings you own, with a preview, a layout score and undo (Operations hub)'],
   ['Base Inspector', 'Scores your layout and lists what to fix: buildings no gun protects, gaps in air cover, idle support buildings and traps, open roads to the Command Center'],
@@ -729,9 +735,9 @@ const WHATS_NEW_56 = [
 ];
 // Shows once per update: for 5.0 itself, and again for 5.5 and 5.6 to players who already saw 5.0.
 function maybeShowWhatsNew5() {
-  if (S.seenUpdate5 === UPDATE5_VERSION && S.seenUpdate55 === UPDATE55_VERSION && S.seenUpdate56 === UPDATE56_VERSION && S.seenUpdate6 === UPDATE6_VERSION) return false;
+  if (S.seenUpdate5 === UPDATE5_VERSION && S.seenUpdate55 === UPDATE55_VERSION && S.seenUpdate56 === UPDATE56_VERSION && S.seenUpdate6 === UPDATE6_VERSION && S.seenUpdate7 === UPDATE7_VERSION) return false;
   const fresh = S.tut != null && S.tut < 99;
-  Object.assign(S, { seenUpdate6: UPDATE6_VERSION, seenUpdate56: UPDATE56_VERSION, seenUpdate55: UPDATE55_VERSION, seenUpdate5: UPDATE5_VERSION, seenUpdate4: UPDATE4_VERSION, seenUpdate3: UPDATE3_VERSION, seenPatch: PATCH_VERSION, seenUpdate2: UPDATE2_VERSION, seenUpdate: UPDATE_VERSION });
+  Object.assign(S, { seenUpdate7: UPDATE7_VERSION, seenUpdate6: UPDATE6_VERSION, seenUpdate56: UPDATE56_VERSION, seenUpdate55: UPDATE55_VERSION, seenUpdate5: UPDATE5_VERSION, seenUpdate4: UPDATE4_VERSION, seenUpdate3: UPDATE3_VERSION, seenPatch: PATCH_VERSION, seenUpdate2: UPDATE2_VERSION, seenUpdate: UPDATE_VERSION });
   save();
   if (fresh) return false;
   openWhatsNew5();
@@ -740,8 +746,10 @@ function maybeShowWhatsNew5() {
 function openWhatsNew5(back) {
   openModal(`
     <div class="settings">
-      <div class="m-head"><div><span class="stamp">Update ${UPDATE6_VERSION}</span><h2>Overhaul</h2></div></div>
-      <p class="lead">Blueprints, the Base Inspector, the Upgrade Advisor and Weekly contracts are at the top of the Operations hub (compass).</p>
+      <div class="m-head"><div><span class="stamp">Update ${UPDATE7_VERSION}</span><h2>Counterstrike</h2></div></div>
+      <p class="lead">The Counteroffensive and Expeditions are at the top of the Operations hub (compass). Ammunition is on each defense's panel.</p>
+      <div class="chap">${UPDATE7_VERSION}: Counterstrike</div>
+      <ul class="whats-new">${WHATS_NEW_7.map(([a, b]) => `<li><b>${a}</b><span>${b}</span></li>`).join('')}</ul>
       <div class="chap">${UPDATE6_VERSION}: Overhaul</div>
       <ul class="whats-new">${WHATS_NEW_6.map(([a, b]) => `<li><b>${a}</b><span>${b}</span></li>`).join('')}</ul>
       <div class="chap">${UPDATE56_VERSION}: bigger base and balance</div>

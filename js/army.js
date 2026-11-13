@@ -13,6 +13,8 @@ function armySpace() {
   let n = 0;
   for (const t in A.troops) n += (A.troops[t] || 0) * TROOPS[t].space;
   for (const q of A.queue) n += TROOPS[q.type].space;
+  // troops away on an expedition keep their bunks
+  for (const e of (S.expeditions && S.expeditions.active) || []) for (const t in e.party) if (TROOPS[t]) n += e.party[t] * TROOPS[t].space;
   return n;
 }
 function troopCount(t) { return army().troops[t] || 0; }
