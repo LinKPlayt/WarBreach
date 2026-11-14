@@ -703,6 +703,11 @@ const WHATS_NEW_55 = [
   ['Building panel', 'Costs wrap instead of being cut off, and the panel no longer covers the Campaign button'],
   ['Boss Raid', 'The time-up message names the right boss'],
 ];
+const WHATS_NEW_71 = [
+  ['Six new troops', 'Grenadier Squad (Barracks 2, splash grenades), Stinger Team (6, anti-air missiles), Commando (9, spots Stealth Commandos), Anti-Tank Team (10), Heavy Tank (11) and Heavy Gunship (12). Something new at every Barracks level'],
+  ['Troop balance', 'Marksman: less damage and range 6 (it beat every other troop). Rocket Trooper: range 4.5, more damage and health, so it outranges tanks. Machine Gunner more health, Attack Helicopter more damage'],
+  ['Troop bar', 'Fades at the edge when more troops are off screen: swipe it'],
+];
 const WHATS_NEW_7 = [
   ['Counteroffensive', 'A new attack mode (Command Center 4). The enemy digs in three siege camps at the ends of the roads; your guns barely scratch them, so send your troops, hero and airstrikes out to destroy them. Endless sectors, each tougher and better paid'],
   ['Special ammunition', 'With an Ammo Bunker, any defense from level 3 can load Incendiary (burning), Armor-piercing (vehicles and bosses) or Cryo (slows) rounds. Tap AMMO on a defense'],
@@ -735,9 +740,9 @@ const WHATS_NEW_56 = [
 ];
 // Shows once per update: for 5.0 itself, and again for 5.5 and 5.6 to players who already saw 5.0.
 function maybeShowWhatsNew5() {
-  if (S.seenUpdate5 === UPDATE5_VERSION && S.seenUpdate55 === UPDATE55_VERSION && S.seenUpdate56 === UPDATE56_VERSION && S.seenUpdate6 === UPDATE6_VERSION && S.seenUpdate7 === UPDATE7_VERSION) return false;
+  if (S.seenUpdate5 === UPDATE5_VERSION && S.seenUpdate55 === UPDATE55_VERSION && S.seenUpdate56 === UPDATE56_VERSION && S.seenUpdate6 === UPDATE6_VERSION && S.seenUpdate7 === UPDATE7_VERSION && S.seenUpdate71 === UPDATE71_VERSION) return false;
   const fresh = S.tut != null && S.tut < 99;
-  Object.assign(S, { seenUpdate7: UPDATE7_VERSION, seenUpdate6: UPDATE6_VERSION, seenUpdate56: UPDATE56_VERSION, seenUpdate55: UPDATE55_VERSION, seenUpdate5: UPDATE5_VERSION, seenUpdate4: UPDATE4_VERSION, seenUpdate3: UPDATE3_VERSION, seenPatch: PATCH_VERSION, seenUpdate2: UPDATE2_VERSION, seenUpdate: UPDATE_VERSION });
+  Object.assign(S, { seenUpdate71: UPDATE71_VERSION, seenUpdate7: UPDATE7_VERSION, seenUpdate6: UPDATE6_VERSION, seenUpdate56: UPDATE56_VERSION, seenUpdate55: UPDATE55_VERSION, seenUpdate5: UPDATE5_VERSION, seenUpdate4: UPDATE4_VERSION, seenUpdate3: UPDATE3_VERSION, seenPatch: PATCH_VERSION, seenUpdate2: UPDATE2_VERSION, seenUpdate: UPDATE_VERSION });
   save();
   if (fresh) return false;
   openWhatsNew5();
@@ -746,8 +751,10 @@ function maybeShowWhatsNew5() {
 function openWhatsNew5(back) {
   openModal(`
     <div class="settings">
-      <div class="m-head"><div><span class="stamp">Update ${UPDATE7_VERSION}</span><h2>Counterstrike</h2></div></div>
+      <div class="m-head"><div><span class="stamp">Update ${UPDATE71_VERSION}</span><h2>Counterstrike</h2></div></div>
       <p class="lead">The Counteroffensive and Expeditions are at the top of the Operations hub (compass). Ammunition is on each defense's panel.</p>
+      <div class="chap">${UPDATE71_VERSION}: new troops and balance</div>
+      <ul class="whats-new">${WHATS_NEW_71.map(([a, b]) => `<li><b>${a}</b><span>${b}</span></li>`).join('')}</ul>
       <div class="chap">${UPDATE7_VERSION}: Counterstrike</div>
       <ul class="whats-new">${WHATS_NEW_7.map(([a, b]) => `<li><b>${a}</b><span>${b}</span></li>`).join('')}</ul>
       <div class="chap">${UPDATE6_VERSION}: Overhaul</div>

@@ -1425,3 +1425,6 @@ body.coach-top #toasts { top: var(--coach-bottom) !important; }
 .spec-row.ammo-row { grid-template-columns: 1fr 1fr; }
 .ammo-row .spec-opt { padding-top: 8px; padding-bottom: 8px; gap: 3px; }
 .ammo-row .spec-gem { width: 18px; height: 18px; }
+#deploy-bar.more-r { -webkit-mask-image: linear-gradient(to right, #000 82%, transparent); mask-image: linear-gradient(to right, #000 82%, transparent); }
+#deploy-bar.more-l { -webkit-mask-image: linear-gradient(to left, #000 82%, transparent); mask-image: linear-gradient(to left, #000 82%, transparent); }
+#deploy-bar.more-l.more-r { -webkit-mask-image: linear-gradient(to right, transparent, #000 14%, #000 86%, transparent); mask-image: linear-gradient(to right, transparent, #000 14%, #000 86%, transparent); }

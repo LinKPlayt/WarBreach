@@ -247,13 +247,13 @@ function updateTroops(dt) {
       moveTroopToward(t, t.post, dt, d);
       continue;
     }
-    const canAir = !!d.air;
+    const canAir = !!d.air, airOnly = !!d.airOnly;
     const aggro = stance.id === 'aggressive' ? 8 : 2.5;
-    if (!t.tgt || t.tgt.hp <= 0 || Math.hypot(t.tgt.x - t.x, t.tgt.y - t.y) > (d.range + aggro) * TILE || (t.tgt.air && !canAir)) {
+    if (!t.tgt || t.tgt.hp <= 0 || Math.hypot(t.tgt.x - t.x, t.tgt.y - t.y) > (d.range + aggro) * TILE || (t.tgt.air && !canAir) || (airOnly && !t.tgt.air)) {
       t.tgt = null;
       let bd = (d.range + aggro) * TILE;
       for (const u of B.units) {
-        if (u.hp <= 0 || (u.air && !canAir) || (ENEMIES[u.type].stealth && !revealed(u))) continue;
+        if (u.hp <= 0 || (u.air && !canAir) || (airOnly && !u.air) || (ENEMIES[u.type].stealth && !revealed(u))) continue;
         if (d.minRange && Math.hypot(u.x - t.x, u.y - t.y) < d.minRange * TILE) continue;
         const dd = Math.hypot(u.x - t.x, u.y - t.y);
         if (dd < bd) { bd = dd; t.tgt = u; }
@@ -276,27 +276,31 @@ function updateTroops(dt) {
           t.flash = 0.06;
           let dmg = t.dmg;
           if (d.antiArmor && ENEMIES[tg.type].vehicle) dmg *= d.antiArmor;
-          if (t.kind === 'flame') {
+          const shot = d.shot || t.kind; // weapon style; new troops name one instead of reusing a kind
+          if (shot === 'flame') {
             splashDamage(tg.x, tg.y, d.splash, dmg, false, 'troops');
             for (let i = 0; i < 4; i++) particles.push({ x: t.x + Math.cos(t.aim) * 8, y: t.y + Math.sin(t.aim) * 8, vx: (tg.x - t.x) * (2.2 + Math.random()) + (Math.random() - 0.5) * 30, vy: (tg.y - t.y) * (2.2 + Math.random()) + (Math.random() - 0.5) * 30, g: -20, life: 0.3, max: 0.3, r: 3, grow: 12, color: Math.random() < 0.5 ? '#ffb347' : '#ff6a2a', glow: true });
             Sound.play('flame');
-          } else if (t.kind === 'mortarteam') {
+          } else if (shot === 'grenade') {
+            B.shots.push({ kind: 'mortar', x: t.x, y: t.y, sx: t.x, sy: t.y, tx: tg.x, ty: tg.y, t: 0, dur: 0.7, arc: 40, dmg, splash: d.splash, air: false, src: 'troops' });
+            Sound.play('mortar');
+          } else if (shot === 'mortarteam') {
             B.shots.push({ kind: 'mortar', x: t.x, y: t.y, sx: t.x, sy: t.y, tx: tg.x, ty: tg.y, t: 0, dur: 1.2, arc: 100, dmg, splash: d.splash, air: false, src: 'troops' });
             Sound.play('mortar');
-          } else if (t.kind === 'heli') {
+          } else if (shot === 'heli') {
             for (const off of [-0.3, 0.3]) B.shots.push({ kind: 'rocket', x: t.x, y: t.y - 24, tx: tg.x, ty: tg.y, target: tg, speed: 10 * TILE, dmg: dmg / 2, splash: 0.5, air: true, wobble: off, age: 0, src: 'troops' });
             Sound.play('rocket');
-          } else if (t.kind === 'rocket') {
+          } else if (shot === 'rocket') {
             B.shots.push({ kind: 'rocket', x: t.x, y: t.y, tx: tg.x, ty: tg.y, target: tg, speed: 9 * TILE, dmg, splash: 0, air: true, wobble: 0, age: 0, src: 'troops' });
             Sound.play('rocket');
-          } else if (t.kind === 'tank') {
+          } else if (shot === 'tank') {
             B.shots.push({ kind: 'mortar', x: t.x, y: t.y, sx: t.x, sy: t.y, tx: tg.x, ty: tg.y, t: 0, dur: 0.3, arc: 0, dmg, splash: d.splash, air: false, src: 'troops' });
             Sound.play('cannon');
             B.fx.push({ kind: 'light', x: t.x + Math.cos(t.aim) * 20, y: t.y + Math.sin(t.aim) * 20, r: 26, life: 0.08, max: 0.08 });
           } else {
             damageEnemy(tg, dmg, 'troops');
             B.fx.push({ kind: 'tracer', x1: t.x, y1: t.y - 2, x2: tg.x, y2: tg.y - (tg.air ? 18 : 2), life: t.kind === 'sniper' ? 0.15 : 0.06, color: '#c9ff9a', width: t.kind === 'sniper' ? 2 : 1.5 });
-            Sound.play(t.kind === 'sniper' ? 'sniper' : t.kind === 'gunner' ? 'mg' : 'rifle');
+            Sound.play(t.kind === 'sniper' ? 'sniper' : t.kind === 'gunner' || t.kind === 'commando' ? 'mg' : 'rifle');
           }
         }
       }
@@ -373,6 +377,9 @@ function buildDeployBar() {
     ${itemButtons()}
     <button class="dp dp-cmd" data-dp="reinforce" aria-label="Call reinforcements"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="6" cy="6" r="2.6" fill="currentColor"/><circle cx="14" cy="6" r="2.6" fill="currentColor"/><path d="M2 15a4 4 0 0 1 8 0zM10 15a4 4 0 0 1 8 0z" fill="currentColor"/></svg><span class="dp-l">${reinforceCost()}</span><span class="dp-cd"></span></button>`;
   el.querySelectorAll('[data-troop]').forEach(s => s.appendChild(renderTroopPreview(s.dataset.troop, 28)));
+  // with many troop types the bar scrolls: fade the edge that has more buttons beyond it
+  const edges = () => { el.classList.toggle('more-r', el.scrollLeft + el.clientWidth < el.scrollWidth - 2); el.classList.toggle('more-l', el.scrollLeft > 2); };
+  el.onscroll = edges; requestAnimationFrame(edges);
 }
 
 function updateDeployBar() {
@@ -438,7 +445,8 @@ function onDeployClick(e) {
 function drawTroopFigure(ctx, t) {
   const d = TROOPS[t.kind];
   ctx.save(); ctx.translate(t.x, t.y);
-  if (t.kind === 'heli') {
+  if (d.flying) {
+    const hs = d.r / 16; ctx.scale(hs, hs);
     ctx.fillStyle = 'rgba(0,0,0,0.22)'; ctx.beginPath(); ctx.ellipse(10, 12, 20, 9, t.angle, 0, Math.PI * 2); ctx.fill();
     ctx.translate(0, -24 + Math.sin((t.walk || 0) * 0.5 + tSec * 2) * 2);
     ctx.rotate(t.angle);
@@ -459,13 +467,14 @@ function drawTroopFigure(ctx, t) {
     return;
   }
   if (d.vehicle) {
+    const vs = d.r / 14; ctx.scale(vs, vs);
     ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.beginPath(); ctx.ellipse(4, 5, 17, 11, t.angle, 0, Math.PI * 2); ctx.fill();
     ctx.save(); ctx.rotate(t.angle);
     const L = 34, W = 22;
     ctx.fillStyle = '#1d2216'; rr(ctx, -L / 2, -W / 2 - 2, L, 7, 2); ctx.fill(); rr(ctx, -L / 2, W / 2 - 5, L, 7, 2); ctx.fill();
     ctx.fillStyle = '#3a4527';
     for (let i = 0; i < 7; i++) { const o = ((t.walk * 2 + i * 5) % L) - L / 2; ctx.fillRect(o, -W / 2 - 2, 1.6, 7); ctx.fillRect(o, W / 2 - 5, 1.6, 7); }
-    ctx.fillStyle = t.hit > 0 ? '#fff' : camoColor({ color: '#55703a' }); rr(ctx, -L / 2 + 3, -W / 2 + 3, L - 6, W - 6, 3); ctx.fill();
+    ctx.fillStyle = t.hit > 0 ? '#fff' : camoColor({ color: d.hull || '#55703a' }); rr(ctx, -L / 2 + 3, -W / 2 + 3, L - 6, W - 6, 3); ctx.fill();
     ctx.fillStyle = 'rgba(255,255,255,0.14)'; rr(ctx, -L / 2 + 5, -W / 2 + 4, L - 10, 5, 2); ctx.fill();
     ctx.fillStyle = '#e9e4d4'; ctx.beginPath();
     for (let i = 0; i < 10; i++) { const r = i % 2 ? 2 : 4.5, a = -Math.PI / 2 + i * Math.PI / 5; ctx.lineTo(-8 + Math.cos(a) * r, Math.sin(a) * r); }
@@ -489,13 +498,16 @@ function drawTroopFigure(ctx, t) {
   ctx.beginPath(); ctx.ellipse(stride, -r * 0.35, r * 0.32, r * 0.22, 0, 0, Math.PI * 2); ctx.fill();
   ctx.beginPath(); ctx.ellipse(-stride, r * 0.35, r * 0.32, r * 0.22, 0, 0, Math.PI * 2); ctx.fill();
   ctx.fillStyle = '#17130f';
-  if (t.kind === 'rocket') { ctx.fillStyle = '#4a5639'; rr(ctx, -3, -7, 18, 4, 2); ctx.fill(); }
+  if (t.kind === 'rocket' || t.kind === 'stinger') { ctx.fillStyle = t.kind === 'stinger' ? '#6b7a86' : '#4a5639'; rr(ctx, -3, -7, 18, 4, 2); ctx.fill(); }
+  else if (t.kind === 'antitank') { ctx.fillStyle = '#3d4530'; rr(ctx, -6, -7, 24, 5, 2.5); ctx.fill(); ctx.fillStyle = '#17130f'; ctx.fillRect(r * 0.2, 0.5, 9, 2); }
+  else if (t.kind === 'grenadier') { ctx.fillStyle = '#2b2e25'; rr(ctx, r * 0.2, -0.5, 10, 4, 2); ctx.fill(); }
+  else if (t.kind === 'commando') { ctx.fillRect(r * 0.2, 0, 12, 2.6); ctx.fillStyle = '#c8402a'; ctx.fillRect(-r * 0.5, -r * 0.9, r, 2); }
   else if (t.kind === 'flame') { ctx.fillStyle = '#c8562a'; rr(ctx, -r * 1.2, -4, r * 0.7, 3.4, 1.7); ctx.fill(); rr(ctx, -r * 1.2, 1, r * 0.7, 3.4, 1.7); ctx.fill(); ctx.fillStyle = '#17130f'; ctx.fillRect(r * 0.2, 0.5, 10, 2.4); }
   else if (t.kind === 'mortarteam') { ctx.fillStyle = '#2b2e25'; rr(ctx, 2, -3, 12, 6, 3); ctx.fill(); }
   else if (t.kind === 'engineer') { ctx.fillStyle = '#9aa0a6'; ctx.fillRect(r * 0.2, -1, 9, 2); ctx.fillRect(r * 0.2 + 7, -3, 3, 6); }
   else if (t.kind === 'sniper') ctx.fillRect(r * 0.2, 0.5, 16, 1.6);
   else if (t.kind === 'gunner') ctx.fillRect(r * 0.2, 0, 13, 3.2);
-  else if (t.kind !== 'medic' && t.kind !== 'flame' && t.kind !== 'mortarteam' && t.kind !== 'engineer') ctx.fillRect(r * 0.2, 0.5, 11, 2);
+  else if (t.kind !== 'medic' && t.kind !== 'flame' && t.kind !== 'mortarteam' && t.kind !== 'engineer' && t.kind !== 'antitank' && t.kind !== 'grenadier' && t.kind !== 'commando') ctx.fillRect(r * 0.2, 0.5, 11, 2);
   ctx.fillStyle = '#3e4a26'; rr(ctx, -r * 1.0, -r * 0.45, r * 0.55, r * 0.9, 2); ctx.fill();
   ctx.fillStyle = t.hit > 0 ? '#fff' : camoColor(d); ctx.beginPath(); ctx.ellipse(0, 0, r * 0.62, r, 0, 0, Math.PI * 2); ctx.fill();
   if (t.kind === 'engineer') { ctx.fillStyle = '#f2b632'; ctx.fillRect(-1.5, -r * 0.8, 3, r * 1.6); }

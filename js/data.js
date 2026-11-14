@@ -713,13 +713,13 @@ const LOGIN_REWARDS = [
 const TROOPS = {
   rifle:  { name: 'Rifle Squad', hp: 170, dmg: 10, rate: 1.6, range: 2.8, speed: 1.3, space: 1, time: 15, cost: { gold: 60 }, unlock: 1, r: 6, color: '#55703a',
     desc: 'Cheap, quick to train. Good at holding enemies in place.' },
-  gunner: { name: 'Machine Gunner', hp: 240, dmg: 5, rate: 6, range: 3.2, speed: 1.0, space: 2, time: 30, cost: { gold: 130 }, unlock: 2, r: 7, color: '#4f6a32', air: true,
+  gunner: { name: 'Machine Gunner', hp: 300, dmg: 5, rate: 6, range: 3.2, speed: 1.0, space: 2, time: 30, cost: { gold: 130 }, unlock: 2, r: 7, color: '#4f6a32', air: true,
     desc: 'Sprays bullets at infantry and drones.' },
   medic:  { name: 'Combat Medic', hp: 160, dmg: 0, heal: 22, rate: 1, range: 2.6, speed: 1.3, space: 2, time: 35, cost: { gold: 160 }, unlock: 3, r: 6, color: '#e2dccb',
     desc: 'Heals your troops and hero nearby.' },
-  rocket: { name: 'Rocket Trooper', hp: 190, dmg: 70, rate: 0.6, range: 3.8, speed: 1.1, space: 3, time: 50, cost: { gold: 220, steel: 80 }, unlock: 4, r: 7, color: '#5d6b3a', antiArmor: 2, air: true,
+  rocket: { name: 'Rocket Trooper', hp: 260, dmg: 80, rate: 0.6, range: 4.5, speed: 1.1, space: 3, time: 50, cost: { gold: 220, steel: 80 }, unlock: 4, r: 7, color: '#5d6b3a', antiArmor: 2, air: true,
     desc: 'Rockets deal double damage to vehicles and can hit aircraft.' },
-  sniper: { name: 'Marksman', hp: 140, dmg: 120, rate: 0.5, range: 6.5, speed: 1.1, space: 3, time: 60, cost: { gold: 280 }, unlock: 5, r: 6, color: '#3f4a27',
+  sniper: { name: 'Marksman', hp: 140, dmg: 70, rate: 0.5, range: 6, speed: 1.1, space: 3, time: 60, cost: { gold: 280 }, unlock: 5, r: 6, color: '#3f4a27',
     desc: 'Very long range, picks off dangerous targets.' },
   flame:  { name: 'Flame Squad', hp: 260, dmg: 10, rate: 5, range: 2, speed: 1.1, space: 3, time: 45, cost: { gold: 240 }, unlock: 3, r: 7, color: '#6a5232', splash: 1.0,
     desc: 'Short-range flamethrowers that burn groups of infantry.' },
@@ -727,7 +727,7 @@ const TROOPS = {
     desc: 'Repairs damaged walls and buildings nearby while under fire.' },
   mortarteam: { name: 'Mortar Team', hp: 180, dmg: 60, rate: 0.35, range: 7, minRange: 2, speed: 0.9, space: 4, time: 70, cost: { gold: 350, steel: 150 }, unlock: 6, r: 7, color: '#4f5a2f', splash: 1.2, lob: true,
     desc: 'Lobs shells over walls from long range. Cannot hit enemies right next to it.' },
-  heli:   { name: 'Attack Helicopter', hp: 900, dmg: 40, rate: 1.2, range: 4.2, speed: 1.8, space: 8, time: 160, cost: { gold: 1200, steel: 600, oil: 200 }, unlock: 8, r: 16, color: '#4f6a32', flying: true, air: true,
+  heli:   { name: 'Attack Helicopter', hp: 900, dmg: 50, rate: 1.2, range: 4.2, speed: 1.8, space: 8, time: 160, cost: { gold: 1200, steel: 600, oil: 200 }, unlock: 8, r: 16, color: '#4f6a32', flying: true, air: true,
     desc: 'Your first air unit. Fast, hits ground and air with rockets. Needs oil.' },
   tank:   { name: 'Battle Tank', hp: 1600, dmg: 95, rate: 0.6, range: 4.4, speed: 0.8, space: 10, time: 180, cost: { gold: 1000, steel: 700, oil: 120 }, unlock: 7, r: 14, color: '#4f6a32', vehicle: true, splash: 0.8,
     desc: 'Heavy armor and a big gun. Takes a lot of room.' },
@@ -1233,7 +1233,7 @@ const UPDATE55_VERSION = '5.5';
 const UPDATE56_VERSION = '5.6';
 // Build of these files. Must match version.json and the ?v= on every script and stylesheet in
 // index.html (tests/logic.test.js checks); bump all three together for every release.
-const BUILD = '7.0.0';
+const BUILD = '7.1.0';
 
 Object.assign(DEFS, {
   vengeance: {
@@ -1406,6 +1406,7 @@ const BLUEPRINTS = [
 
 /* =================== Update 7.0: Counterstrike =================== */
 const UPDATE7_VERSION = '7.0';
+const UPDATE71_VERSION = '7.1';
 
 // Counteroffensive: the enemy digs in three siege camps at the ends of the roads. Base defenses
 // barely scratch them; your troops, hero and abilities have to go out and destroy them.
@@ -1451,3 +1452,21 @@ ACHIEVEMENTS.push(
   { id: 'strikes', name: 'Spearhead', stat: s => (s.strike && s.strike.best) || 0, tiers: [3, 10, 20], medals: [10, 25, 60], unit: 'Counteroffensive sectors cleared' },
   { id: 'expeditions', name: 'Pathfinder', stat: s => s.stats.expeditions || 0, tiers: [5, 30, 100], medals: [5, 15, 40], unit: 'expeditions completed' },
 );
+
+/* =================== Update 7.1: new troops =================== */
+// shot: the weapon style the troop uses in battle (see updateTroops). airOnly: shoots only aircraft.
+// reveal: spots stealth units within this many tiles. hull: vehicle paint.
+Object.assign(TROOPS, {
+  grenadier: { name: 'Grenadier Squad', hp: 210, dmg: 24, rate: 0.6, range: 3.4, speed: 1.2, space: 2, time: 30, cost: { gold: 140 }, unlock: 2, r: 6, color: '#5c6a3a', splash: 1.0, shot: 'grenade',
+    desc: 'Lobs grenades over the front line. Splash damage tears through groups of infantry.' },
+  stinger: { name: 'Stinger Team', hp: 230, dmg: 95, rate: 0.7, range: 5.5, speed: 1.1, space: 3, time: 50, cost: { gold: 260, steel: 120 }, unlock: 6, r: 7, color: '#5a6550', air: true, airOnly: true, shot: 'rocket',
+    desc: 'Heat-seeking missiles with long reach. Only fires at drones, gunships and bombers, but hits them very hard.' },
+  commando: { name: 'Commando', hp: 800, dmg: 48, rate: 2.5, range: 3.0, speed: 1.7, space: 4, time: 80, cost: { gold: 520, steel: 200 }, unlock: 9, r: 7, color: '#3a4430', reveal: 4,
+    desc: 'Elite, fast and tough. Spots Stealth Commandos within 4 tiles so your guns can see them.' },
+  antitank: { name: 'Anti-Tank Team', hp: 480, dmg: 270, rate: 0.4, range: 5.0, speed: 1.0, space: 5, time: 90, cost: { gold: 600, steel: 400 }, unlock: 10, r: 7, color: '#4d5636', antiArmor: 2.5, shot: 'rocket',
+    desc: 'A heavy recoilless rifle. Two and a half times the damage against vehicles, bosses included.' },
+  heavytank: { name: 'Heavy Tank', hp: 3600, dmg: 230, rate: 0.5, range: 5.0, speed: 0.65, space: 14, time: 260, cost: { gold: 2200, steel: 1600, oil: 300 }, unlock: 11, r: 18, color: '#4a5a3a', hull: '#46553a', vehicle: true, splash: 1.0, shot: 'tank',
+    desc: 'A slow steel fortress with a huge gun. Splash damage, and it shrugs off fire.' },
+  gunship: { name: 'Heavy Gunship', hp: 1900, dmg: 75, rate: 1.5, range: 5.0, speed: 1.5, space: 12, time: 280, cost: { gold: 2400, steel: 1200, oil: 400 }, unlock: 12, r: 20, color: '#3e5040', flying: true, air: true, shot: 'heli',
+    desc: 'Twin rocket pods over the battlefield. Ground troops cannot reach it; hits ground and air.' },
+});

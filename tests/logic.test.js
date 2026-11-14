@@ -336,7 +336,7 @@ function check(name, ok, detail) { results.push({ name, ok: !!ok, detail }); con
     const walk = slow => { B.units = []; spawnEnemy('rifleman'); const u = B.units[0]; u.x = 2 * TILE; u.y = 2 * TILE; u.retarget = 99; u.tgt = null; B.bonus.slow = slow; const x0 = u.x, y0 = u.y; for (let i = 0; i < 20; i++) updateEnemy(u, 0.05); return Math.hypot(u.x - x0, u.y - y0); };
     const d0 = walk(0), d1 = walk(0.12); o.mud = d1 / d0;
     // war bonds
-    const m0 = waveMedals(3); B.bonus.medalsPerWave = 2; o.bonds = waveMedals(3) - m0;
+    const m0 = waveMedals(3); B.bonus.medalsPerWave = 2; o.bonds = waveMedals(3) - m0; o.weekendMul = isWeekend() ? WEEKEND.medalMul : 1;
     B.over = true; leaveBattle(); closeModal();
     // set every defense of a type at once (panel)
     const mgs = S.buildings.filter(b => b.type === 'mg'); mgs.forEach(b => { b.priority = 'close'; }); mgs[0].priority = 'air';
@@ -359,7 +359,7 @@ function check(name, ok, detail) { results.push({ name, ok: !!ok, detail }); con
   check('Rapid Training research trains troops 8% faster per level', Math.abs(u6.drill - 0.6) < 0.01, `x${u6.drill.toFixed(3)}`);
   check('Vehicles first picks a vehicle over a closer soldier', u6.vehicleFirst && u6.closest);
   check('Mud and Wire slows enemies by 12%', Math.abs(u6.mud - 0.88) < 0.02, `x${u6.mud.toFixed(3)}`);
-  check('War Bonds adds medals for every cleared wave', u6.bonds === 2, `+${u6.bonds}`);
+  check('War Bonds adds medals for every cleared wave (doubled on Weekend Blitz days)', u6.bonds === 2 * u6.weekendMul, `+${u6.bonds}`);
   check('one tap sets a targeting priority for every defense of that type', u6.priorityAll);
   check('the build queue grows with the Command Center (3, 4, 5, 6)', u6.queue.join() === '4,4,5,6' || u6.queue.join() === '3,4,5,6', u6.queue.join());
   check('Apocalypse threat exists and records its best wave', u6.apocalypse && u6.apBest === 7, `best ${u6.apBest}`);
@@ -577,6 +577,50 @@ function check(name, ok, detail) { results.push({ name, ok: !!ok, detail }); con
   check('a Combat Medic cuts the risk by a quarter', Math.abs(ex.medic - 0.75) < 1e-9);
   check('orders reset with the day; a recalled party returns with no reward', ex.reset && ex.recall);
   check('saves keep parties in the field and drop broken ones; locked before Command Center 3', ex.saved && ex.cleaned && ex.locked);
+
+  // 17. Update 7.1: new troops and troop balance
+  const tp = await page.evaluate(() => {
+    const o = {};
+    if (B) { B.over = true; leaveBattle(); } closeModal();
+    T.base(12); S.obstacles = []; rebuildGrid(); S.gold = S.steel = S.oil = 1e7; army().troops = {}; army().queue = [];
+    o.count = Object.keys(TROOPS).length;
+    o.everyLevel = Array.from({ length: 12 }, (_, i) => i + 1).every(L => Object.values(TROOPS).some(d => d.unlock === L) || L === 1);
+    o.late = [9, 10, 11, 12].every(L => Object.values(TROOPS).some(d => d.unlock === L));
+    o.trainAll = Object.keys(TROOPS).every(k => trainStatus(k).ok || trainStatus(k).reason === 'Army is full');
+    startBattle(null); B.hero = null; B.weather = WEATHER.find(w => w.id === 'clear'); B.breakT = 0; battleUpdate(0.01); B.queue = []; B.units = [];
+    for (const b of S.buildings) b._stun = 99;
+    const fight = (kind, enemy, secs, place = 40) => {
+      B.units = []; B.troops = []; B.shots = [];
+      const tr = spawnTroop(kind, 10 * TILE, 10 * TILE, false, 0); tr.post = { x: tr.x, y: tr.y }; tr.hp = tr.max = 1e6;
+      spawnEnemy(enemy); const u = B.units[0]; u.elite = false; u.hp = u.max = 1e6; u.x = tr.x + place; u.y = tr.y; u.retarget = 99;
+      B.dmgBy.troops = 0;
+      for (let t = 0; t < secs; t += 0.05) { for (const b of S.buildings) b._stun = 99; updateTroops(0.05); for (const p of B.shots) updateShot(p, 0.05); B.shots = B.shots.filter(p => !p.done); }
+      return { dmg: 1e6 - u.hp, tr, u };
+    };
+    o.stingerGround = fight('stinger', 'rifleman', 5).dmg; o.stingerAir = fight('stinger', 'drone', 5).dmg;
+    const at = TROOPS.antitank; const atv = fight('antitank', 'tank', 10).dmg, ati = fight('antitank', 'heavy', 10).dmg; o.atRatio = atv / Math.max(1, ati);
+    o.grenadeSplash = (() => { B.units = []; B.troops = []; B.shots = []; const tr = spawnTroop('grenadier', 10 * TILE, 10 * TILE, false, 0); tr.hp = tr.max = 1e6; for (let i = 0; i < 3; i++) { spawnEnemy('rifleman'); const u = B.units[i]; u.elite = false; u.hp = u.max = 1e6; u.x = tr.x + 100 + i * 8; u.y = tr.y; } for (let t = 0; t < 3; t += 0.05) { updateTroops(0.05); for (const p of B.shots) updateShot(p, 0.05); B.shots = B.shots.filter(p => !p.done); } return B.units.filter(u => u.hp < u.max).length; })();
+    // Commandos spot stealth units within 4 tiles; ground enemies cannot reach a gunship; heavy tanks take 30% less damage
+    const keepB = S.buildings; S.buildings = S.buildings.filter(b => b.type === 'hq'); // no radar or gun nearby to reveal it first
+    B.units = []; B.troops = []; const cm = spawnTroop('commando', 2 * TILE, 1 * TILE, false, 0);
+    spawnEnemy('stealth'); const st = B.units[0]; st.x = cm.x + 3.5 * TILE; st.y = cm.y; updateStealth(st); o.revealNear = !!st.revealed;
+    st.x = cm.x + 6 * TILE; updateStealth(st); o.revealFar = !!st.revealed;
+    S.buildings = keepB;
+    B.troops = []; const gs = spawnTroop('gunship', 10 * TILE, 10 * TILE, false, 0); o.gunshipUntargetable = nearestAlly(gs.x + 10, gs.y, 3 * TILE) !== gs;
+    B.troops = []; const ht = spawnTroop('heavytank', 10 * TILE, 10 * TILE, false, 0); const h0 = ht.hp; damageAlly(ht, 100); o.tankArmor = h0 - ht.hp;
+    B.over = true; leaveBattle(); closeModal();
+    o.sniper = TROOPS.sniper.dmg <= 70 && TROOPS.sniper.range <= 6;
+    o.rocketReach = TROOPS.rocket.range > ENEMIES.tank.range;
+    return o;
+  });
+  check('17 troop types, with something new to unlock at every Barracks level up to 12', tp.count === 17 && tp.everyLevel && tp.late, `${tp.count} troops`);
+  check('every troop can be trained at Barracks 12', tp.trainAll);
+  check('the Stinger Team shoots aircraft and nothing else', tp.stingerGround === 0 && tp.stingerAir > 0, `ground ${tp.stingerGround}, air ${Math.round(tp.stingerAir)}`);
+  check('the Anti-Tank Team does 2.5x damage to vehicles', Math.abs(tp.atRatio - 2.5) < 0.3, `x${tp.atRatio.toFixed(2)}`);
+  check('Grenadier grenades splash a group', tp.grenadeSplash >= 2, `${tp.grenadeSplash} hit`);
+  check('Commandos reveal stealth units within 4 tiles only', tp.revealNear && !tp.revealFar);
+  check('ground enemies cannot engage the Heavy Gunship; the Heavy Tank takes 30% less damage', tp.gunshipUntargetable && Math.abs(tp.tankArmor - 70) < 0.01, `${tp.tankArmor}`);
+  check('balance: the Marksman no longer outclasses late troops; Rocket Troopers outrange tanks', tp.sniper && tp.rocketReach);
 
   check('no page errors', !errors.length, errors.slice(0, 3).join(' | '));
   await browser.close(); srv.close();

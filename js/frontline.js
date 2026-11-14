@@ -79,6 +79,8 @@ function updateStealth(u) {
     if ((d.dmg || d.guard) && !d.trap && distToBuilding(u.x, u.y, b) <= 2.5) { u.revealed = true; return; }
   }
   if (B.hero && !B.hero.dead && Math.hypot(B.hero.x - u.x, B.hero.y - u.y) < 3 * TILE) u.revealed = true;
+  // troops trained to spot infiltrators (Commandos)
+  if (!u.revealed) for (const t of B.troops) { const r = TROOPS[t.kind] && TROOPS[t.kind].reveal; if (r && t.hp > 0 && !(t.drop > 0) && Math.hypot(t.x - u.x, t.y - u.y) <= r * TILE) { u.revealed = true; break; } }
 }
 function revealed(u) { return !ENEMIES[u.type].stealth || u.revealed; }
 function jammedAt(x, y) {

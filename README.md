@@ -196,6 +196,18 @@ Then Sgt. Vance runs an 18-step guided tutorial with a spotlight on what to tap:
 - Skip it any time (two taps), and replay the tutorial or the intro from **Settings > Data**.
 - Returning players never see it. Players who were part-way through the old four hints get the new tutorial without the intro.
 
+## Update 7.1: new troops and troop balance
+
+**Six new troops**, so every Barracks level up to 12 unlocks something: Grenadier Squad (Barracks 2, lobbed grenades with splash) · Stinger Team (6, long-range missiles that only hit aircraft, very hard) · Commando (9, fast and tough, reveals Stealth Commandos within 4 tiles) · Anti-Tank Team (10, 2.5x damage to vehicles and bosses) · Heavy Tank (11, splash gun, takes 30% less damage) · Heavy Gunship (12, flying, out of reach of ground troops). 17 troop types in all.
+
+**Balance check.** Every troop fought the same enemy forces alone (60 army space each, guns off, Barracks 12), and support troops in mixes. The Marksman beat every other troop, including the Barracks 11 Heavy Tank, without a loss: its range out-reached every enemy and its shots one-shot infantry. Changes:
+- Marksman: damage 120 → 70, range 6.5 → 6.
+- Rocket Trooper: range 3.8 → 4.5 (tanks out-ranged it), damage 70 → 80, health 190 → 260. It now clears the armored test force instead of losing to it.
+- Machine Gunner: health 240 → 300. Attack Helicopter: damage 40 → 50.
+Against a column of 18 tanks, 24 jeeps, 12 troop carriers and 6 mechs, results now rise with Barracks level: Rifle Squad 17k damage, Grenadier 51k, Marksman 66k, Mortar Team 95k (all wiped out), Rocket Trooper clears it with 55% of the army left, Battle Tank 68%, Anti-Tank Team 86%, Heavy Tank 93%. Combat Medics and Shield Troopers raise a rifle army's survival from 39% to 75% and 59%.
+
+The troop bar in battle fades at the edge when more buttons are off screen.
+
 ## Update 7.0: Counterstrike
 
 Three major features. The plan and results are in [docs/update-7.0-plan.md](docs/update-7.0-plan.md).
